@@ -22,8 +22,11 @@ manuals, **[LIVE]** verified against the running editor,
 
 ## 2. Invocation
 
-Template: `ED <FROM/A>,SIZE/K` **[DOC]** (the 2nd-ed. manual's OCR shows a
-garbled `PBOM/A`; the argument is the FROM file).
+Template: `ED FROM/A,SIZE` **[BIN]** — the binary's ReadArgs template string is
+exactly `FROM/A,SIZE` (no `/K` modifier), so the SIZE value may be given
+either as a keyword (`ED file SIZE 45000`, as the manual shows) or
+positionally (`ED file 45000`) **[BIN]**; the 2nd-ed. manual's OCR shows a
+garbled `PBOM/A`, which is `FROM/A`.
 
 - `ED filename` — opens `filename`; if it exists it is loaded and the first
   lines displayed, otherwise a blank screen is presented ("Creating new file"
@@ -206,8 +209,9 @@ to return ("Type any character to continue" **[BIN]**). Observed format
 **[LIVE]**:
 
 - Labels: `Editing file`, `Tab distance`, `Left margin`, `Right margin`,
-  `Block start`, `Block end`, `Buffer usage` (the last three also present
-  as **[BIN]** strings).
+  `Block start`, `Block end`, `Buffer usage` (all seven confirmed as
+  **[BIN]** strings; the first scan missed `Right margin` due to the
+  padding bug noted in section 8).
 - Values are zero-padded three-digit numbers: tab distance default `003`,
   left margin default `001`, right margin default `077`, buffer usage
   `000%`.
@@ -220,21 +224,39 @@ to return ("Type any character to continue" **[BIN]**). Observed format
 
 ## 8. Error and message strings (complete observed set)
 
-From the binary **[BIN]**: Last line deleted; No room in buffer; Creating
-new file; Input lines truncated; Top of file; Line too long; Unknown
-command; Commands abandoned; Syntax error; Unable to open file; No block
-marked; Block incorrectly specified; Tabs in input file expanded; File
-contains binary; File too big; Bad arguments; Invalid number given for
-SIZE; SIZE of %N too small; Unable to open window %S; Not enough free
-store; Invalid file name; Edits will be lost - type Y to confirm: ;
-Exchange? ; Writing to file; Error - Disk Full; Type any character to
-continue ; Unable to obtain information about %S; %S is a directory and
-cannot be edited.
+Complete string table (corrected 2026-10-11; the first pass had a
+word-padding bug in the scanner — `tools/hunk_dump.py` — that skipped
+strings following odd-length strings) **[BIN]**:
 
-Observed live but absent from the static string dump: **search failed**
-(shown on the status line when `F` finds no match) **[LIVE]** — presumably
-stored in a form the dump's BCPL-string scan missed (split or assembled);
-to be located during the disassembly pass.
+Startup/CLI (seg4): Unable to obtain information about %S; %S is a
+directory and cannot be edited; RAW:0/0/639/199/Ed 1.14; FROM/A,SIZE;
+Bad arguments; Invalid number given for SIZE; SIZE of %N too small;
+Unable to open window %S; Not enough free store; Invalid file name;
+Ed (1.14); File contains binary; File too big.
+
+Editor messages (seg3): Last line deleted; No room in buffer; Creating
+new file; Input lines truncated; Top of file; **End of file**; Line too
+long; Unknown command; **Unmatched ()**; Commands abandoned; Syntax
+error; Unable to open file; **Number expected**; No block marked;
+**Cursor inside block**; Block incorrectly specified; **Search failed**
+(confirmed live on failed `F`); Tabs in input file expanded; Error.
+
+Save/backup (seg6/seg7): Edits will be lost - type Y to confirm: ;
+:t/ed-backup; Writing to file; **Buffer corrupt**; Error - Disk Full;
+File contains binary; No room in buffer; Tabs in file expanded; Input
+lines truncated; Exchange? ; Unset.
+
+SH display (seg7): Editing file; Tab distance; Left margin;
+Right margin; Block start; Block end; Buffer usage; Type any character
+to continue.
+
+Newly identified after the scan fix, all relevant to spec behavior:
+- "End of file" — the bottom-of-file counterpart of "Top of file"
+- "Unmatched ()" — command-group parenthesis mismatch
+- "Number expected" — numeric argument missing for M/SL/SR/ST
+- "Cursor inside block" — block operation rejected with the cursor
+  inside the marked block
+- "Search failed" — live-confirmed on failed find (see section 9)
 
 ## 9. Live verification notes (2026-10-11 session)
 

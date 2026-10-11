@@ -88,7 +88,8 @@ def bcpl_strings(raw, minlen=3):
             s = raw[i + 1 : i + 1 + n]
             if printable(s):
                 out.append((i, s.decode("latin-1")))
-                i += 1 + n + (n & 1)  # word padded
+                # a BCPL string occupies 1+n bytes, padded to an even total
+                i += 1 + n + ((1 + n) & 1)
                 continue
         i += 1
     return out
