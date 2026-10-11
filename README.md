@@ -37,8 +37,8 @@ Technically it is an interesting specimen:
 2. **Document** — publish a behavior specification of Ed 1.14 written in
    our own words, derived from analysis of a lawfully owned binary plus
    the publicly documented (manual) behavior.
-3. **(Optional) Reimplement** — a clean-room port built only from the
-   spec, differentially tested against the original in an emulator.
+3. **(Optional) Reimplement** — a clean-room port in Rust built only from
+   the spec, differentially tested against the original in an emulator.
 
 ## Legal approach
 

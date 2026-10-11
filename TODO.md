@@ -76,11 +76,11 @@ Status legend: [x] done · [ ] to do · [~] in progress · [-] optional / deferr
       command set against the 1991 manual's list
 - [ ] Write version-history section (1.10 → 1.14 → 2.x → 3.1)
 
-## 9. Clean-room reimplementation (OPTIONAL — do not start before
+## 9. Clean-room reimplementation in Rust (OPTIONAL — do not start before
       sections 6–7 are complete)
 
+- [ ] Target language: Rust (decided); portable console clone
 - [ ] Freeze the spec as the clean-room input
-- [ ] Choose target (e.g., C, portable console clone)
 - [ ] Implement from the spec only (see LEGAL.md §6)
 - [ ] Differential testing against original in emulator: same inputs,
       compare outputs/behavior
