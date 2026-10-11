@@ -48,16 +48,38 @@ Status legend: [x] done · [ ] to do · [~] in progress · [-] optional / deferr
       [BIN]/[DOC]/[VERIFY]
 - [ ] Convert remaining [VERIFY] tags to [BIN]/[DOC] (see section 6)
 
-## 6. Verification (TO DO — next phase)
+## 6. Verification (LIVE SESSION 2026-10-11 — mostly done)
 
-- [ ] Set up WinUAE or FS-UAE with Workbench 1.3 environment
-- [ ] Run Ed 1.14 live; verify startup, window, status line
-- [ ] Verify every extended command against the spec tables
-- [ ] Verify save/backup: X writes FROM file and :T/ED-BACKUP
-- [ ] Verify edge cases: line >255 on input, tab expansion, binary-file
-      rejection, word wrap at right margin, Q confirmation flow
-- [ ] Trace DOS packet I/O with the emulator debugger ( breakpoints on
-      file reads/writes during startup and save )
+Environment ended up as: Amiga Forever player (installed) running the real
+Workbench 1.3 environment with genuine Kickstart 1.3; Ed driven via
+keyboard automation + screenshot/OCR. Note: standalone WinUAE could not
+use Cloanto's encrypted (AMIROMTYPE1) ROMs; the AF player decrypts at
+runtime.
+
+- [x] Emulation environment with real Kickstart 1.3
+- [x] Run Ed 1.14 live; window title "Ed 1.14" confirmed
+- [x] SH status display: full field list, defaults (tab 003, left margin
+      001, right margin 077 — conflicts with manual's 79), block fields
+      show line text / Unset, "Type any character to continue"
+- [x] Failed find message: "search failed" (not in static string dump!)
+- [x] EQ prompt "Exchange? " + Y applies the exchange
+- [x] Block lifecycle: BS;BE / IB / DB, and "No block marked" after DB→IB
+- [x] ST/SL/SR with SH readback (111/010/060); semicolon command lines;
+      "command space number" syntax
+- [x] Word wrap live test (SR 20 → wrapped short lines)
+- [x] Q confirmation: "Edits will be lost - type Y to confirm: "; N stays
+- [x] X save order + backup path correction: FROM file written first, then
+      t/ed-backup relative to the CURRENT DIRECTORY (leading-colon syntax,
+      not the T: volume); failed backup on protected volume → DOS
+      requester → Cancel → Ed exits with FROM file already saved
+- [x] BONUS FINDING: Ed 1.14 fails under Kickstart 3.1 (Software Failure
+      #87000004) while other 1.3 BCPL commands run — needs disassembly
+      follow-up
+- [ ] Remaining live tests: M n, repeat counts, groups/RP, UC/LC, U undo,
+      IF/WB file ops, tab-distance behavior, buffer-usage growth, positive
+      t/ed-backup path in a writable directory
+- [ ] Trace DOS packet I/O with the emulator debugger (breakpoints on
+      file reads/writes during startup and save)
 
 ## 7. Disassembly pass (TO DO)
 

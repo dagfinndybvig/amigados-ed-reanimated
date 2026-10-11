@@ -1,11 +1,14 @@
 # AmigaDOS Ed 1.14 — Behavior Specification (draft)
 
-Status: draft, v0.1. Derived from (a) static analysis of the Ed 1.14 binary
-extracted from the Workbench 1.3 disk image, and (b) documented behavior in
-the *AmigaDOS Manual, 2nd edition* (Bantam, 1987) and COMPUTE! issue 73
-(June 1986, covering Ed 1.10). Static findings are marked **[BIN]**; manual
-findings are marked **[DOC]**. Items still needing verification against the
-binary or live behavior are marked **[VERIFY]**.
+Status: draft, v0.2. Derived from (a) static analysis of the Ed 1.14 binary
+extracted from the Workbench 1.3 disk image, (b) documented behavior in the
+*AmigaDOS Manual, 2nd edition* (Bantam, 1987) and COMPUTE! issue 73 (June
+1986, covering Ed 1.10), and (c) a live verification session (2026-10-11)
+running the real Ed 1.14 under Kickstart 1.3 in an emulator. Findings are
+tagged: **[BIN]** verified in the binary, **[DOC]** documented in the
+manuals, **[LIVE]** verified against the running editor,
+**[VERIFY]** still needs confirmation. Where [LIVE] and [DOC] disagree,
+[LIVE] wins and the conflict is noted.
 
 ## 1. Program identification
 
@@ -53,8 +56,12 @@ garbled `PBOM/A`; the argument is the FROM file).
 - Files containing binary are rejected: "File contains binary" **[BIN][DOC]**.
 - Writing always terminates the file with a linefeed even if the original
   had none **[DOC]**.
-- Right margin default column 79; word wrap applies while typing at end of
-  line **[DOC]**. `EX` disables the right margin for the current line.
+- Right margin default is **077** per the SH display **[LIVE]** — the 1987
+  manual states 79 **[DOC]**; the SH readback is the program's own state
+  display and is treated as authoritative pending disassembly confirmation.
+  Word wrap while typing at the end of a line is confirmed live (with
+  `SR 20` set, typed text wrapped into successive lines) **[LIVE]**. `EX`
+  disables the right margin for the current line.
 - Insert-only editing (no overwrite mode) **[DOC]**.
 
 ## 4. Immediate commands (special keys)
@@ -114,9 +121,9 @@ garbled `PBOM/A`; the argument is the FROM file).
 | `DB` | Delete marked block |
 | `DC` | Delete character at cursor |
 | `E /s/t/` | Exchange `s` into `t` (next occurrence; use with RP/count) |
-| `EQ /s/t/` | Exchange with query — prompts "Exchange? "; Y applies, N skips |
+| `EQ /s/t/` | Exchange with query — prompts "Exchange? " **[LIVE]**; Y applies, N skips |
+| `F /s/` | Find `s` forward from one place past cursor; failure shows "search failed" **[LIVE]** |
 | `EX` | Extend: ignore right margin on current line until cursor moves |
-| `F /s/` | Find `s` forward from one place past cursor |
 | `I /s/` | Insert line with `s` before current line |
 | `IB` | Insert copy of marked block after current line |
 | `IF /s/` | Insert file named `s` after current line |
@@ -150,11 +157,14 @@ Margins are ignored while exchanging **[DOC]**.
   the line first) **[DOC]**.
 - Any change to the text undefines the block marks, except `IB` **[DOC]**.
 - After `DB` the block is undefined, so `DB` then `IB` is impossible, but
-  `IB` then `DB` works **[DOC]**.
-- Single-line block: `BS;BE` **[DOC]**.
-- Marks used without a marked block: "No block marked", bad order:
+  `IB` then `DB` works **[DOC]** — verified live: `IB` inserted the copy,
+  `DB` deleted it, and a following `IB` failed **[LIVE]**.
+- Single-line block: `BS;BE` **[DOC]**, confirmed live (SH then showed both
+  block fields holding the line's text) **[LIVE]**.
+- Marks used without a marked block: "No block marked" **[BIN]**, observed
+  live after the `DB`-then-`IB` sequence **[LIVE]**; bad order:
   "Block incorrectly specified" **[BIN]**; `SH` reports block state
-  ("Unset" when undefined) **[BIN]**.
+  ("Unset" when undefined) **[BIN][LIVE]**.
 
 ### 5.3 Undo semantics
 
@@ -164,21 +174,48 @@ screen scrolls; it does not undo line deletion **[DOC]**.
 
 ## 6. Files and saving
 
-- `X`: writes buffer to the FROM file, then also writes the buffer to
-  `:T/ED-BACKUP`; the backup persists until the next exit overwrites it
-  **[DOC]**, corroborated by the binary string `:t/ed-backup` **[BIN]**.
+- `X` performs two writes, in order **[LIVE]**:
+  1. the buffer to the FROM file (observed: the FROM file exists on disk
+     after a failed step 2);
+  2. the buffer to the backup file.
+- **Backup path correction** **[LIVE]**: the backup is written to
+  `t/ed-backup` *relative to the current directory* — the binary string
+  `:t/ed-backup` uses AmigaDOS leading-colon current-directory syntax, not
+  the `T:` volume (an earlier draft of this spec misread the 1987 manual's
+  ":T/ED-BACKUP" as a volume reference; the leading colon makes it a
+  relative path, which is why the Workbench disks carry a `t` drawer).
+- If the backup write hits a write-protected volume, AmigaDOS raises the
+  system requester ("Volume ... is write protected. Retry/Cancel");
+  choosing Cancel leaves the FROM file saved (step 1 already completed) and
+  Ed terminates **[LIVE]**.
+- The backup persists until the next exit overwrites it **[DOC]**.
 - "Writing to file" message during save; "Error - Disk Full" on write
   failure **[BIN]**.
 - `SA` may save to a different filename; `SA` then `Q` equals `X` **[DOC]**.
-- `Q` prompts for confirmation only if there are unsaved edits **[DOC]**.
+- `Q` prompts for confirmation only if there are unsaved edits; the prompt
+  is "Edits will be lost - type Y to confirm: " **[BIN]**, confirmed live —
+  answering N returns to editing **[LIVE]**.
 - `IF` inserts any readable file after the current line; `WB` writes the
   marked block to a file, overwriting an existing file of that name
   **[DOC]**.
 
-## 7. Status display (SH) fields
+## 7. Status display (SH)
 
-Observed labels in the binary **[BIN]**: `Editing file`, `Tab distance`,
-`Left margin`, `Block start`, `Buffer usage`, `Unset`.
+`SH` replaces the screen with a status panel **[LIVE]**; press any character
+to return ("Type any character to continue" **[BIN]**). Observed format
+**[LIVE]**:
+
+- Labels: `Editing file`, `Tab distance`, `Left margin`, `Right margin`,
+  `Block start`, `Block end`, `Buffer usage` (the last three also present
+  as **[BIN]** strings).
+- Values are zero-padded three-digit numbers: tab distance default `003`,
+  left margin default `001`, right margin default `077`, buffer usage
+  `000%`.
+- `Block start`/`Block end` show the *text* of the marked first/last line
+  (truncated to fit), or `Unset` when no block is defined.
+- All fields read back correctly after `ST 111` / `SL 10` / `SR 60`
+  (`111 010 060`) **[LIVE]**, which also confirms multi-command lines
+  separated by `;` and "command + space + number" argument syntax.
 
 ## 8. Error and message strings (complete observed set)
 
@@ -193,7 +230,30 @@ Exchange? ; Writing to file; Error - Disk Full; Type any character to
 continue ; Unable to obtain information about %S; %S is a directory and
 cannot be edited.
 
-## 9. Differences from later ED versions
+Observed live but absent from the static string dump: **search failed**
+(shown on the status line when `F` finds no match) **[LIVE]** — presumably
+stored in a form the dump's BCPL-string scan missed (split or assembled);
+to be located during the disassembly pass.
+
+## 9. Live verification notes (2026-10-11 session)
+
+Environment: genuine Kickstart 1.3 ROM (licensed via Amiga Forever), real
+Workbench 1.3 disk in DF0:, Ed 1.14 started from the CLI as
+`ED RAM:edtest.txt`.
+
+- Ed opens its own console window titled "Ed 1.14" **[LIVE]** (matches the
+  binary's `RAW:0/0/639/199/Ed 1.14` string **[BIN]**).
+- Ed 1.14 fails to start under Kickstart 3.1 (A1200, 68020) with a
+  Software Failure alert ("Program failed (error #87000004)"), while other
+  1.3 BCPL commands (SetPatch, Assign, Mount, Resident, LoadWB) run fine
+  in the same environment **[LIVE]**. Ed 1.14 requires its contemporary
+  Kickstart; the failure under 3.1 is worth pinpointing during disassembly
+  (likely a globvec/compat-layer entry).
+- The status line sits on the last line of Ed's window; messages remain
+  until the next command **[DOC][LIVE]**.
+- `ZZ` (unknown command) → "Unknown command" **[LIVE]**.
+
+## 10. Differences from later ED versions
 
 The AmigaOS 2.0+ ED (documented in the 1991 3rd-edition manual) adds mouse
 selection, `WITH` command files, function-key display (`DF`), menus (`EM`),
@@ -201,18 +261,21 @@ selection, `WITH` command files, function-key display (`DF`), menus (`EM`),
 (`DL`, `DW`, `EL`, `EP`, `FC`). None of these apply to Ed 1.14
 **[VERIFY against disassembly]**.
 
-## 10. Open items / next steps
+## 11. Open items / next steps
 
-1. Dynamic verification in WinUAE/FS-UAE (breakpoints on DOS packet I/O) to
-   confirm startup sequence and save/backup ordering.
-2. Disassembly pass (Ghidra or IRA) to confirm the extended-command letter
-   table in code and check for undocumented commands.
-3. Confirm whether Ed 1.14 accepts any template arguments beyond FROM and
-   SIZE (manual documents only those two).
+1. Disassembly pass (Ghidra or IRA) to: confirm the extended-command
+   letter table, locate the "search failed" string, and pin down the
+   default right-margin constant (077 vs the manual's 79).
+2. Pinpoint why Ed 1.14 fails under Kickstart 3.1's BCPL compat layer.
+3. Remaining live tests: `M n` navigation, repeat counts (`4 E /a/b/`),
+   command groups and `RP`, `UC`/`LC` case handling, `U` undo, `IF`/`WB`
+   file operations, tab-distance behavior, buffer-usage display growth,
+   and the positive path of the `t/ed-backup` write (in a writable
+   current directory).
 4. Diff against Ed 1.10 (WB 1.2) and Ed 2.x/3.1 binaries for the version
    history section.
 
-## 11. Sources
+## 12. Sources
 
 - `materials/workbench13/c/Ed` — Ed 1.14 binary (user's Amiga Forever
   license; do not redistribute).
