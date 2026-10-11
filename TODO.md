@@ -68,6 +68,28 @@ Status legend: [x] done · [ ] to do · [~] in progress · [-] optional / deferr
 - [ ] Check for hidden/undocumented behavior (e.g., extra template
       arguments beyond FROM/SIZE)
 - [ ] Annotate findings back into the spec ([BIN] tags)
+- [-] OPTIONAL AID — BCPL compiler for idiom comparison (researched
+      2026-10-11; clearly BCPL-related, hence recorded here):
+      compile small test programs with a period-correct BCPL compiler to
+      learn compiler idioms (globvec JSR (A5) call patterns, prologues,
+      BCPL string layout), then pattern-match against Ed's segments.
+      Toolchain options, by provenance:
+      1. Original MetaComCo BCPL compiler + ALINK (the tool that built
+         Ed, emitting the TRIPOS load format we detect): only cleanly
+         available inside the leaked AmigaOS tree — OFF-LIMITS
+         (LEGAL.md §4). The 1985 Commodore dev kit shipped Macro
+         Assembler/ALINK/C, not the BCPL compiler. Treat as unavailable.
+      2. Arnor BCPL Compiler v1.0 (1986, Amiga): runnable disk image on
+         archive.org (BCPL_Compiler_v1.0_1986_Arnor, .dsk 194KB, runs in
+         WinUAE). Commercial product, murky rights status — local private
+         study only, never redistribute; weaker provenance than our
+         Amiga Forever baseline.
+      3. Martin Richards' BCPL (cl.cam.ac.uk/~mr10, free, source
+         available; includes Cintpos, TRIPOS's descendant): clean
+         provenance, but targets Cintcode on modern hosts — producing
+         Amiga m68k binaries means porting a code generator.
+      Not needed for the spec or the Rust port (clean-room from spec
+      only, LEGAL.md §6); pure disassembly aid.
 
 ## 8. Version comparison (TO DO)
 
