@@ -33,7 +33,13 @@ garbled `PBOM/A`, which is `FROM/A`.
   **[BIN]**).
 - `SIZE n` — text buffer size in bytes. Default: max(40000, file size)
   **[DOC]**; errors: "Invalid number given for SIZE", "SIZE of %N too small"
-  **[BIN]**.
+  **[BIN]**. **Correction from code** **[BIN, code]**: the only size-floor
+  constant anywhere in the binary is `0x2710` = 10,000 (three sites in
+  seg4; the clamp at seg4+0x010E reads "if computed size >= 10000 use it,
+  else 10000"). No 40,000 (`0x9C40`) constant exists — the 40,000 minimum
+  in the 1987 manual and the "40K" default in the 1986 COMPUTE! article
+  (Ed 1.10) do not match the Ed 1.14 binary; possibly a 1.10-to-1.14
+  change **[VERIFY context]**.
 - Rejects: "Bad arguments", "Invalid file name", "Unable to obtain
   information about %S", "%S is a directory and cannot be edited" **[BIN]**.
 - Opens its own console window via `RAW:0/0/639/199/Ed 1.14` (640x200,
