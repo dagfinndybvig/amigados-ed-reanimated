@@ -27,6 +27,9 @@ function Send-Mouse($flags) {
 }
 
 if ($Middle) {
+  $mp = Get-Process -Name $ProcName -ErrorAction Stop | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1
+  [void][CK]::SetForegroundWindow($mp.MainWindowHandle)
+  Start-Sleep -Milliseconds 250
   Send-Mouse ([CK]::MIDDLEDOWN); Start-Sleep -Milliseconds 50; Send-Mouse ([CK]::MIDDLEUP)
   Write-Output "MIDDLE CLICK"
   exit 0
