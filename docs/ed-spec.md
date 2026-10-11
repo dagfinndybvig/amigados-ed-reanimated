@@ -213,9 +213,10 @@ to return ("Type any character to continue" **[BIN]**). Observed format
   `000%`.
 - `Block start`/`Block end` show the *text* of the marked first/last line
   (truncated to fit), or `Unset` when no block is defined.
-- All fields read back correctly after `ST 111` / `SL 10` / `SR 60`
-  (`111 010 060`) **[LIVE]**, which also confirms multi-command lines
-  separated by `;` and "command + space + number" argument syntax.
+- All fields read back correctly after parameter changes: `ST 8` → `008`,
+  `ST 111` / `SL 10` / `SR 60` → `111 010 060` **[LIVE]**, which also
+  confirms multi-command lines separated by `;` and "command + space +
+  number" argument syntax.
 
 ## 8. Error and message strings (complete observed set)
 
