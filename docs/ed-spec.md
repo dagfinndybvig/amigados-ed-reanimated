@@ -181,11 +181,11 @@ screen scrolls; it does not undo line deletion **[DOC]**.
 
 ### 5.4 Command dispatch (code analysis)
 
-Located in segment 6 at 0x07D6–0x0988 **[BIN, code]**, via linear
-disassembly (`tools/disasm_ed.py`, Capstone m68k):
+Located in segment 6 at 0x07D6–0x0988 **[BIN, code]**
+(`tools/disasm_ed.py`, Capstone m68k; census by `tools/call_census.py`):
 
 - The command word is compared as a 32-bit value in `d1` through a binary
-  compare tree: single letters as ASCII longs (`'A'`=0x41 ... `'X'=0x58`),
+  compare tree: single letters as ASCII longs (`'A'`=0x41 ... `'X'=0x58),
   two-letter commands as packed words (`"BS"`=0x4253, `"EQ"`=0x4551, ...).
 - The full set found in the tree matches section 5.1 exactly: `(`, `)`,
   A, B, D, E, F, I, J, M, N, P, Q, S, T, U, X (single) and BE, BF, BS, CE,
@@ -199,6 +199,34 @@ disassembly (`tools/disasm_ed.py`, Capstone m68k):
 - The immediate (CTRL-key) command dispatch sits in segment 8
   (letters loaded via `moveq`, calling globvec entry 28 through
   `jsr (a5)`); full key mapping still to be tabulated **[VERIFY]**.
+
+### 5.5 Runtime interface (BCPL globvec) — code analysis
+
+**Calling convention** **[BIN, code]**: every external call is
+`jsr (a5)` with `d0` = byte offset (multiple of 4) of the target slot in
+the process global vector, scalar arguments in `d1`–`d3`, and pointer
+arguments pre-loaded into `a4` from `off(a2)` (Ed's globals, also
+globvec-relative).
+
+**Segment 0 is the globvec initialization** **[BIN, code]**: a fill loop
+writes `0x474C0003, 0x474C0005, ...` ("GL" magic + sequential glue
+index) into the allocated vector — the standard AmigaDOS BCPL glue
+mechanism, where dos.library resolves each "GL" reference to the actual
+function on first use.
+
+**Call census** **[BIN, code]**: 545 `jsr (a5)` sites across all nine
+segments, using exactly **19 distinct slot offsets**: 0, 12, 16, 20, 24,
+28, 32, 36, 40, 44, 48, 52, 60, 64, 76, 80, 108, 112, 120 — i.e. globvec
+entries 3–30. Heaviest users: slot 32 (78 sites), slot 28 (69), slot 16
+(91), slot 12 (58). Segments specialize: seg4 (startup/CLI) uses 112/120,
+seg7 (file I/O) uses 60/64/76/80, seg8 (keyboard) uses 108/112.
+
+**Open**: naming each slot requires the Kickstart 1.3 dos.library glue
+table (the GL-index → function order). Candidate routes for a later
+pass: observing calls live in the emulator debugger with known DOS
+operations as anchors, or correlating with the published TRIPOS BCPL
+function list. The 19-slot census is Ed's complete runtime API surface
+either way **[VERIFY for names]**.
 
 ## 6. Files and saving
 

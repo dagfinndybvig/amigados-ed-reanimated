@@ -97,10 +97,17 @@ scriptable pattern analysis; full listing at emulator/ed.asm, 6417 lines).
 - [x] String-table scan bug fixed (word-padding); new messages: End of
       file, Unmatched (), Number expected, Cursor inside block,
       Search failed, Buffer corrupt
+- [x] BCPL calling convention reconstructed: jsr (a5) = globvec dispatch,
+      d0 = byte offset of slot, args in d1-d3/a4; seg0 = globvec init
+      filling 0x474Cxxxx GL-glue references (AmigaDOS BCPL glue mechanism)
+- [x] Call census (tools/call_census.py): 545 jsr (a5) sites, 19 distinct
+      slot offsets (12..120 = globvec entries 3..30) — Ed's complete
+      runtime API surface
+- [ ] Name the 19 globvec slots: need KS 1.3 dos.library glue table
+      (GL-index order). Options: live observation in emulator debugger
+      with known DOS calls as anchors; TRIPOS BCPL function list
 - [ ] Immediate/CTRL-key dispatch (seg8): letters via moveq + globvec
       call 28; tabulate the full key map
-- [ ] Reconstruct BCPL globvec usage (which dos.library entries Ed calls;
-      compare against KS 3.1 compat layer to explain the Software Failure)
 - [ ] Right-margin default: SH live readback says 077; no 0x4f (79)
       immediate anywhere in the code; locate the init (data table?) to
       close the manual conflict
