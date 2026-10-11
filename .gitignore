@@ -2,6 +2,8 @@
 materials/
 ref/
 af-extract/
+emulator/
+emulator.zip
 
 # Python
 __pycache__/
