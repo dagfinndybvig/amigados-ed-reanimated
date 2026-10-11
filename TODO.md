@@ -81,15 +81,30 @@ runtime.
 - [ ] Trace DOS packet I/O with the emulator debugger (breakpoints on
       file reads/writes during startup and save)
 
-## 7. Disassembly pass (TO DO)
+## 7. Disassembly pass (IN PROGRESS)
 
-- [ ] Import segments into Ghidra (m68k) or run IRA
-- [ ] Reconstruct BCPL globvec usage and runtime conventions
-- [ ] Locate the extended-command dispatch/table; confirm command letters
-      in code (verify no undocumented commands)
-- [ ] Check for hidden/undocumented behavior (e.g., extra template
-      arguments beyond FROM/SIZE)
-- [ ] Annotate findings back into the spec ([BIN] tags)
+Tooling: Capstone m68k via tools/disasm_ed.py (chosen over Ghidra/IRA for
+scriptable pattern analysis; full listing at emulator/ed.asm, 6417 lines).
+
+- [x] Disassembly tooling working (linear disasm + SKIPDATA + immediates
+      scan)
+- [x] Extended-command dispatch located (seg6 0x07D6-0x0988): binary
+      compare tree, 15 single letters + ( ) + 23 two-letter commands —
+      exactly matches the spec table, NO undocumented commands; BF shares
+      F's handler, EQ shares E's; unknowns fall to common branch
+- [x] Template string found in binary: "FROM/A,SIZE" (no /K — SIZE accepts
+      positional form)
+- [x] String-table scan bug fixed (word-padding); new messages: End of
+      file, Unmatched (), Number expected, Cursor inside block,
+      Search failed, Buffer corrupt
+- [ ] Immediate/CTRL-key dispatch (seg8): letters via moveq + globvec
+      call 28; tabulate the full key map
+- [ ] Reconstruct BCPL globvec usage (which dos.library entries Ed calls;
+      compare against KS 3.1 compat layer to explain the Software Failure)
+- [ ] Right-margin default: SH live readback says 077; no 0x4f (79)
+      immediate anywhere in the code; locate the init (data table?) to
+      close the manual conflict
+- [ ] Annotate findings back into the spec ([BIN] tags) — partly done
 - [-] OPTIONAL AID — BCPL compiler for idiom comparison (researched
       2026-10-11; clearly BCPL-related, hence recorded here):
       compile small test programs with a period-correct BCPL compiler to

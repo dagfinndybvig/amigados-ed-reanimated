@@ -109,6 +109,10 @@ garbled `PBOM/A`, which is `FROM/A`.
 
 ### 5.1 Command list
 
+The complete command set is verified from the dispatch code **[BIN, code]**
+(see section 5.4): 15 single-letter commands, `(` and `)` group syntax, and
+23 two-letter commands — no undocumented commands exist.
+
 | Command | Action |
 |---|---|
 | `A /s/` | Insert line with `s` after current line |
@@ -174,6 +178,27 @@ Margins are ignored while exchanging **[DOC]**.
 `U` restores the original version of the current line only. Ed keeps a copy
 of the current line and commits it when the cursor leaves the line or the
 screen scrolls; it does not undo line deletion **[DOC]**.
+
+### 5.4 Command dispatch (code analysis)
+
+Located in segment 6 at 0x07D6–0x0988 **[BIN, code]**, via linear
+disassembly (`tools/disasm_ed.py`, Capstone m68k):
+
+- The command word is compared as a 32-bit value in `d1` through a binary
+  compare tree: single letters as ASCII longs (`'A'`=0x41 ... `'X'=0x58`),
+  two-letter commands as packed words (`"BS"`=0x4253, `"EQ"`=0x4551, ...).
+- The full set found in the tree matches section 5.1 exactly: `(`, `)`,
+  A, B, D, E, F, I, J, M, N, P, Q, S, T, U, X (single) and BE, BF, BS, CE,
+  CL, CR, CS, DB, DC, EQ, EX, IB, IF, LC, RP, SA, SB, SH, SL, SR, ST, UC,
+  WB (two-letter).
+- `BF` jumps to the same handler as `F` (0x3BC), and `EQ` to the same as
+  `E` (0x370): the one-letter handlers consume an optional second letter
+  from the command line.
+- All non-matching values fall through to a common path (0x25E),
+  the "Unknown command" branch.
+- The immediate (CTRL-key) command dispatch sits in segment 8
+  (letters loaded via `moveq`, calling globvec entry 28 through
+  `jsr (a5)`); full key mapping still to be tabulated **[VERIFY]**.
 
 ## 6. Files and saving
 
