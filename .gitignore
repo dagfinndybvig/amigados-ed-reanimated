@@ -1,0 +1,8 @@
+# Copyrighted material — never commit, publish, or share (see LEGAL.md)
+materials/
+ref/
+af-extract/
+
+# Python
+__pycache__/
+*.pyc
