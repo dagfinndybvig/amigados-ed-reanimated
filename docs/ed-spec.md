@@ -228,11 +228,19 @@ entries 3–30. Heaviest users: slot 32 (78 sites), slot 28 (69), slot 16
 seg7 (file I/O) uses 60/64/76/80, seg8 (keyboard) uses 108/112.
 
 **Open**: naming each slot requires the Kickstart 1.3 dos.library glue
-table (the GL-index → function order). Candidate routes for a later
-pass: observing calls live in the emulator debugger with known DOS
-operations as anchors, or correlating with the published TRIPOS BCPL
-function list. The 19-slot census is Ed's complete runtime API surface
-either way **[VERIFY for names]**.
+table (the GL-index → function order). Route tried and ruled out: the
+WinUAE built-in debugger is not compiled into release builds (`#ifdef
+DEBUGGER`, cfgfile/main.cpp). Route opened: the licensed raw KS 1.3 ROM
+is now available (`emulator/kick13.rom`, materialized by the installed
+Amiga Forever), enabling full standalone emulation (own WinUAE + patched
+boot disk; Ed 1.14 runs and shows "Creating new file" **[LIVE]**).
+Negative finding **[BIN]**: the byte pair `0x474C` appears nowhere in
+the ROM, so the GL references are not resolved by a simple ROM-side
+magic compare — the resolver must live in RAM-resident dos.library
+overlays, or the 0x474Cxxxx fill values in Ed's seg0 must be re-read
+(as word-pointers, they encode a different mechanism). Either way the
+19-slot census remains Ed's complete runtime API surface
+**[VERIFY for names]**.
 
 **Segment roles** **[BIN, code]**: seg0 = globvec initialization; seg1 =
 line-buffer engine (word-pointer-indexed line array accessed via `a0`,
