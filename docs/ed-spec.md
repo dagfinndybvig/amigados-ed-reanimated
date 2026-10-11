@@ -208,11 +208,19 @@ Located in segment 6 at 0x07D6–0x0988 **[BIN, code]**
 
 ### 5.5 Runtime interface (BCPL globvec) — code analysis
 
-**Calling convention** **[BIN, code]**: every external call is
-`jsr (a5)` with `d0` = byte offset (multiple of 4) of the target slot in
-the process global vector, scalar arguments in `d1`–`d3`, and pointer
-arguments pre-loaded into `a4` from `off(a2)` (Ed's globals, also
-globvec-relative).
+**Calling convention — CORRECTED** **[BIN, code, cross-verified against the
+Type binary]**: `jsr (a5)` is the BCPL CALLPROC mechanism: it calls the
+procedure whose pointer is in `a4` (loaded from `off(a2)` — the program's
+globals), with `d0`–`d3` holding the first four scalar arguments. A5
+points at the runtime call-thunk block (small helpers also live at fixed
+A5-relative offsets, e.g. `jsr $10(a5)`, `jsr $12(a5)`), and A6 holds the
+BCPL return address (procedures return with `jmp (a6)`). The earlier
+census interpretation ("19 distinct function numbers in d0") was
+therefore wrong: the d0 values are common first arguments; the function
+identity lives in the (a2) global offsets, which the census must be
+redone on. Empirical confirmation: a test program entered by the 1.3
+Shell with a C-style `jsr -30(a6)` crashed (Software Failure), while
+1.3 binaries visibly use the a4/a5 convention above.
 
 **Segment 0 is the globvec initialization** **[BIN, code]**: a fill loop
 writes `0x474C0003, 0x474C0005, ...` ("GL" magic + sequential glue

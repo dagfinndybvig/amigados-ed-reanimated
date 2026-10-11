@@ -103,17 +103,25 @@ scriptable pattern analysis; full listing at emulator/ed.asm, 6417 lines).
 - [x] Call census (tools/call_census.py): 545 jsr (a5) sites, 19 distinct
       slot offsets (12..120 = globvec entries 3..30) — Ed's complete
       runtime API surface
-- [ ] Name the 19 globvec slots — current state:
-      - WinUAE release builds lack the debugger (#ifdef DEBUGGER) — no
-        breakpoint route without a custom build
-      - Licensed raw KS 1.3 ROM now available (emulator/kick13.rom) —
-        full standalone emulation works (own WinUAE + edboot.adf; Ed
-        auto-runs, "Creating new file" live)
-      - 0x474C does NOT appear in the ROM — GL resolution mechanism
-        needs re-analysis (RAM-resident overlay? word-pointer reading?)
-      - Next options: parse a WinUAE save state for the live globvec;
-        or hand-build a tiny old-format dump tool; or custom WinUAE
-        debugger build; or savestate.c-guided state parsing
+- [ ] Name the runtime functions — session state (2026-10-11 night):
+      - Convention CORRECTED (see spec 5.5): jsr (a5) = CALLPROC with the
+        procedure pointer in a4 from (a2) globals; d0-d3 = args; the old
+        "19 function numbers" reading was wrong — redo the census keyed
+        on (a2) global offsets
+      - Dump-tool campaign (gvdump v2, hand-assembled m68k, capstone-
+        verified, in tools/make_gvdump.py): writes DosLibrary.dl_GV
+        (1024 bytes) to DF0:gv.dump; injected as Utilities/Calculator on
+        edboot6.adf, run from the patched startup-sequence BEFORE Ed
+      - Tool v1 lessons: 1.x ATRM load-file container required (not the
+        modern hunk numbering); Shell does NOT enter commands with
+        A6=DOSBase (guru); v2 derives ExecBase from [4] and opens
+        dos.library via exec LVO -552 itself
+      - Two boots so far: no gv.dump yet — boot may not have reached
+        Calculator before shutdown (StartupII wait), or a further
+        failure; check the console screenshots (emulator/boot6*.png)
+      - NEXT: boot edboot6.adf, wait 2.5+ min, stop WinUAE, extract
+        adf, look for gv.dump; if present parse against kick13.rom's
+        dos.library LVO jump table to name the slots
 - [ ] Immediate/CTRL-key dispatch (seg8): letters via moveq + globvec
       call 28; tabulate the full key map
 - [ ] Right-margin default: SH live readback says 077; no 0x4f (79)
