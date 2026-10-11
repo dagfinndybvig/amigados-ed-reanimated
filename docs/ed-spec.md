@@ -228,6 +228,17 @@ operations as anchors, or correlating with the published TRIPOS BCPL
 function list. The 19-slot census is Ed's complete runtime API surface
 either way **[VERIFY for names]**.
 
+**Segment roles** **[BIN, code]**: seg0 = globvec initialization; seg1 =
+line-buffer engine (word-pointer-indexed line array accessed via `a0`,
+buffer state in globals $260–$2C8: base, line count, capacity, gap
+pointers; insert/delete/shift loops match the documented line editing
+behavior); seg4 = startup/CLI (ReadArgs, size validation, window open);
+seg6 = extended-command dispatch and handlers; seg7 = file I/O and the
+SH display; seg8 = immediate/CTRL-key handling. Two direct helper call
+offsets also exist — `jsr $10(a5)` (4 sites) and `jsr $12(a5)` (9
+sites) — small runtime helpers (likely pointer/string utilities), exact
+semantics pending the debugger pass **[VERIFY]**.
+
 ## 6. Files and saving
 
 - `X` performs two writes, in order **[LIVE]**:
