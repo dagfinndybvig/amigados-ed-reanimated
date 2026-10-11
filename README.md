@@ -105,22 +105,31 @@ af-extract/   administrative (no-install) extract of the Amiga Forever MSI
 
 ## Current state
 
-- Ed 1.14 extracted and triaged; load format identified as the old
-  TRIPOS/BCPL format with nine code hunks.
-- Complete command set, screen model, buffer limits, and save/backup
-  semantics documented in `docs/ed-spec.md`, cross-checked against the
-  binary's string table (all error messages, prompts, and the
-  `:T/ED-BACKUP` backup path confirmed).
+- Ed 1.14 extracted and triaged; load format identified as the 1.x-era
+  Amiga hunk format (ATRM "Amiga Binary File Structure") with nine code
+  hunks.
+- Behavior spec substantially **live-verified** under genuine Kickstart
+  1.3: SH display format, parameter commands, block lifecycle, Q/EQ
+  prompts, word wrap, and a corrected backup path (`t/ed-backup`
+  relative to the current directory, not the T: volume).
+- Disassembly pass (Capstone): the complete extended-command dispatch
+  found and verified (38 commands, none undocumented); the BCPL calling
+  convention reconstructed (`jsr (a5)` = CALLPROC with the procedure
+  pointer in `a4`); segment roles mapped; template corrected to
+  `FROM/A,SIZE`; two manual-vs-binary discrepancies documented (right
+  margin 077 not 79; SIZE floor 10000 not 40000).
+- In progress: naming the runtime procedure slots via a hand-assembled
+  memory-dump tool injected into the boot disk (see TODO section 7).
 
 ## Roadmap
 
 - [x] Legal framework and project setup
 - [x] Binary extraction and triage
 - [x] Behavior spec draft
-- [ ] Dynamic verification in an emulator
-- [ ] Disassembly pass: command-letter table, undocumented behavior
+- [x] Dynamic verification in an emulator (genuine KS 1.3)
+- [x] Disassembly pass: command dispatch verified, calling convention reconstructed (slot naming in progress)
 - [ ] Version comparison (Ed 1.10 / 1.14 / 2.x / 3.1)
-- [ ] (Optional) clean-room reimplementation + differential testing
+- [ ] (Optional) clean-room reimplementation in Rust + differential testing
 
 ## License
 

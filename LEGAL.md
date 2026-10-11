@@ -152,10 +152,13 @@ If the optional reimplementation proceeds:
 
 ## 7. Standing rules of the repository
 
-1. Nothing in `materials/`, `ref/`, or `af-extract/` is ever committed to a
-   public repository, uploaded, or shared. These directories hold
-   third-party copyrighted material used locally for licensed private
-   study. A `.gitignore` excluding them should precede any `git init`.
+1. Nothing in `materials/`, `ref/`, `af-extract/`, or `emulator/` is ever
+   committed to a public repository, uploaded, or shared. These
+   directories hold third-party copyrighted material used locally for
+   licensed private study (extracted disk contents, manual scans, ROM
+   images, disk images, and emulator screenshots). A `.gitignore`
+   excluding them should precede any `git init` — the project repository
+   already has one.
 2. Tools in `tools/` are original code and may be published.
 3. The spec in `docs/` is written to be publishable and may be released.
 4. If in doubt about a source or an output, stop and re-read §4 and §5.
