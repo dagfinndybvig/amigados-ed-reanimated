@@ -88,19 +88,33 @@ s.50B).
 
 ```
 README.md     this file — project overview and ground rules
-LEGAL.md      the legal argument and hard rules (see LEGAL.md)
+LEGAL.md      the legal argument and hard rules
+BCPL.md       BCPL language reference and all project Gotchas
 TODO.md       progress tracker — what is done and what is next
 docs/
   ed-spec.md  the behavior specification of Ed 1.14 (main deliverable)
+ed-rs/        the clean-room Rust reimplementation (the clone)
+  src/
+    buffer.rs    line-buffer model (255-char lines, block marks, wrap)
+    cmdline.rs   extended command parser + executor (38 commands)
+    screen.rs    full-screen TUI (crossterm)
+    headless.rs  --script mode for non-interactive testing
+    main.rs      CLI entry, FROM/A,SIZE template
 tools/
   adf_extract.py   AmigaDOS OFS (DOS\0) ADF extractor, layout-verified
   inspect_adf.py   raw block inspector for ADF images
   hunk_dump.py     TRIPOS/standard Amiga executable parser + string dump
+  disasm_ed.py     Capstone m68k disassembler for the Ed binary
+  call_census.py   runtime call-site census
+  make_gvdump.py   hand-assembled memory-dump tool builder
+  *.ps1            emulator automation harness (screenshot/OCR/keyboard)
 ref/          research copies of the AmigaDOS manual text (copyrighted:
               local only, never redistribute)
 materials/    files extracted from the Workbench 1.3 disk image
               (copyrighted: local only, never redistribute)
 af-extract/   administrative (no-install) extract of the Amiga Forever MSI
+emulator/     emulator, ROM, disk images, configs, screenshots
+              (copyrighted: local only, never redistribute)
 ```
 
 ## Current state
@@ -127,34 +141,71 @@ af-extract/   administrative (no-install) extract of the Amiga Forever MSI
 
 ## Running the clone
 
+**Prerequisites:** [Rust](https://rustup.rs) (any recent stable; the
+`crossterm` crate is the only dependency). No Amiga ROMs or emulator
+needed — the clone is a native Windows/Linux/macOS binary.
+
+**Build:**
+
 ```
 cd ed-rs
 cargo build --release
 ```
 
-The binary is at `ed-rs/target/release/ed.exe`. To edit a file:
+The binary is at `ed-rs/target/release/ed` (`.exe` on Windows).
+
+**Edit a file (interactive):**
 
 ```
-ed-rs\target\release\ed.exe myfile.txt
+ed-rs/target/release/ed myfile.txt          # Linux/macOS
+ed-rs	argetelease\ed.exe myfile.txt     # Windows
 ```
 
-Optional buffer size (keyword or positional, floor 10,000):
+**Optional buffer size** (keyword or positional; minimum 10,000 bytes,
+matching the binary's `0x2710` clamp, not the manual's 40,000):
 
 ```
 ed.exe myfile.txt SIZE 50000
 ed.exe myfile.txt 50000
 ```
 
-To run a script of Ed commands headlessly (for testing):
+**Run a script of Ed commands headlessly** (for testing and CI):
 
 ```
 ed.exe --script commands.ed myfile.txt
 ```
 
-In the editor: type to insert text; **ESC** enters extended command
-mode; **RETURN** executes and returns to typing; **ESC Q** then **Y**
-quits without saving; **ESC X** saves and exits. All 38 extended
-commands from the original are supported.
+**In the editor:**
+
+| Key | Action |
+|---|---|
+| type | insert at cursor (word wrap at column 77) |
+| arrows | move cursor |
+| BACKSPACE / DEL | delete left / at cursor |
+| RETURN | split line |
+| TAB | next tab stop (distance 3, inserts nothing) |
+| CTRL-A | insert blank line after |
+| CTRL-B | delete line |
+| CTRL-D / CTRL-U | scroll 12 lines toward start / end |
+| CTRL-E | top of screen (or bottom if already there) |
+| CTRL-F | flip case of letter at cursor |
+| CTRL-G | repeat last extended command |
+| CTRL-O | delete word or spaces |
+| CTRL-R / CTRL-T | previous / next word |
+| CTRL-V | redraw |
+| CTRL-Y | delete to end of line |
+| **ESC** | enter extended command mode |
+| ESC + RETURN | execute command, back to typing |
+| ESC + ESC | execute command, stay in command mode |
+
+Extended commands: A, B, BE, BF, BS, CE, CL, CR, CS, D, DB, DC, E, EQ,
+EX, F, I, IB, IF, J, LC, M, N, P, Q, RP, S, SA, SB, SH, SL, SR, ST, T,
+U, UC, WB, X, plus `(` `)` for groups and numbers for repeat counts.
+See `docs/ed-spec.md` section 5 for the full reference.
+
+**Note on X:** saving with X writes the FROM file and also a backup
+to `t/ed-backup` relative to the current directory (this is the
+corrected backup path from the binary analysis).
 
 ## Roadmap
 
