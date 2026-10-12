@@ -187,6 +187,7 @@ fn handle_immediate(
                 'd' => {
                     ed.buffer.cursor.line = ed.buffer.cursor.line.saturating_sub(12);
                     ed.buffer.cursor.col = 0;
+                    ed.buffer.follow_cursor_line();
                 }
                 'e' => {
                     let b = &mut ed.buffer;
@@ -198,6 +199,7 @@ fn handle_immediate(
                         b.cursor.line = b.top;
                     }
                     b.cursor.col = 0;
+                    b.follow_cursor_line();
                 }
                 'f' => {
                     let b = &mut ed.buffer;
@@ -283,6 +285,7 @@ fn handle_immediate(
                     ed.buffer.cursor.line =
                         (ed.buffer.cursor.line + 12).min(ed.buffer.line_count() - 1);
                     ed.buffer.cursor.col = 0;
+                    ed.buffer.follow_cursor_line();
                 }
                 'v' => {
                     // full redraw happens on next render anyway
@@ -329,6 +332,7 @@ fn handle_immediate(
                 msg = Some("Top of file".to_string());
             } else {
                 b.cursor.line -= 1;
+                b.follow_cursor_line();
             }
         }
         KeyCode::Down => {
@@ -337,6 +341,7 @@ fn handle_immediate(
                 msg = Some("End of file".to_string());
             } else {
                 b.cursor.line += 1;
+                b.follow_cursor_line();
             }
         }
         KeyCode::Left => {
@@ -924,5 +929,85 @@ mod tests {
             &mut last,
         );
         assert_eq!(decision, Decision::Quit { save: false });
+    }
+
+    #[test]
+    fn u_restores_edited_current_line() {
+        let mut ed = ed_with("hello\nworld\n");
+        let mut last = String::new();
+        // type X at the front of line 0
+        press(
+            &mut ed,
+            Mode::Immediate,
+            KeyCode::Char('X'),
+            KeyModifiers::NONE,
+            &mut last,
+        );
+        assert_eq!(ed.buffer.lines[0], "Xhello");
+
+        run_extended(&mut ed, "U", &mut last);
+        assert_eq!(ed.buffer.lines[0], "hello");
+        assert_eq!(ed.buffer.cursor.line, 0);
+    }
+
+    #[test]
+    fn u_commits_when_cursor_leaves_the_line() {
+        let mut ed = ed_with("hello\nworld\n");
+        let mut last = String::new();
+        press(
+            &mut ed,
+            Mode::Immediate,
+            KeyCode::Char('X'),
+            KeyModifiers::NONE,
+            &mut last,
+        );
+        // move away and come back: the edit is committed (spec 5.3)
+        press(
+            &mut ed,
+            Mode::Immediate,
+            KeyCode::Down,
+            KeyModifiers::NONE,
+            &mut last,
+        );
+        press(
+            &mut ed,
+            Mode::Immediate,
+            KeyCode::Up,
+            KeyModifiers::NONE,
+            &mut last,
+        );
+        run_extended(&mut ed, "U", &mut last);
+        assert_eq!(ed.buffer.lines[0], "Xhello");
+    }
+
+    #[test]
+    fn u_does_not_resurrect_deleted_line() {
+        let mut ed = ed_with("one\ntwo");
+        let mut last = String::new();
+        run_extended(&mut ed, "D", &mut last);
+        assert_eq!(ed.buffer.line_count(), 1);
+        run_extended(&mut ed, "U", &mut last);
+        assert_eq!(ed.buffer.line_count(), 1);
+        assert_eq!(ed.buffer.lines[0], "two");
+    }
+
+    #[test]
+    fn u_after_split_keeps_the_split() {
+        let mut ed = ed_with("hello world");
+        let mut last = String::new();
+        // cursor to end of line, then RETURN splits it
+        run_extended(&mut ed, "CE", &mut last);
+        press(
+            &mut ed,
+            Mode::Immediate,
+            KeyCode::Enter,
+            KeyModifiers::NONE,
+            &mut last,
+        );
+        assert_eq!(ed.buffer.line_count(), 2);
+        run_extended(&mut ed, "U", &mut last);
+        assert_eq!(ed.buffer.line_count(), 2);
+        assert_eq!(ed.buffer.lines[0], "hello world");
+        assert_eq!(ed.buffer.lines[1], "");
     }
 }

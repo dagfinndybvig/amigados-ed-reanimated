@@ -33,17 +33,56 @@ pub struct Buffer {
     pub top: usize,
     /// Horizontal scroll offset in characters.
     pub left: usize,
+    /// Baseline for U: the line the cursor last entered, and its
+    /// content at that moment (spec 5.3).
+    pub undo_line: usize,
+    pub undo_text: String,
 }
 
 impl Buffer {
     pub fn new() -> Self {
-        Buffer {
+        let mut b = Buffer {
             lines: vec![String::new()],
             cursor: Cursor { line: 0, col: 0 },
             block_start: None,
             block_end: None,
             top: 0,
             left: 0,
+            undo_line: usize::MAX,
+            undo_text: String::new(),
+        };
+        b.follow_cursor_line();
+        b
+    }
+
+    /// Re-baseline the U copy for the line the cursor is on now
+    /// (spec 5.3): Ed keeps a copy of the current line and commits it
+    /// when the cursor leaves the line. Call after any change to
+    /// `cursor.line`.
+    pub fn follow_cursor_line(&mut self) {
+        if self.undo_line != self.cursor.line {
+            self.undo_line = self.cursor.line;
+            self.undo_text = self.lines[self.cursor.line].clone();
+        }
+    }
+
+    /// Reset the U baseline to the cursor line's current content even
+    /// when the line index did not change (after wholesale line
+    /// replacement such as deletion or join).
+    pub fn reset_undo_baseline(&mut self) {
+        self.undo_line = self.cursor.line;
+        self.undo_text = self.lines[self.cursor.line].clone();
+    }
+
+    /// U: restore the current line to its baseline content (spec 5.3).
+    /// Returns true when a restore happened.
+    pub fn undo_current_line(&mut self) -> bool {
+        if self.undo_line == self.cursor.line && self.undo_line != usize::MAX {
+            let text = self.undo_text.clone();
+            self.lines[self.cursor.line] = text;
+            true
+        } else {
+            false
         }
     }
 
@@ -53,6 +92,7 @@ impl Buffer {
         if b.lines.is_empty() {
             b.lines.push(String::new());
         }
+        b.reset_undo_baseline();
         b
     }
 
@@ -137,6 +177,7 @@ impl Buffer {
             let prev_len = self.lines[self.cursor.line].chars().count();
             self.lines[self.cursor.line].push_str(&cur);
             self.cursor.col = prev_len;
+            self.follow_cursor_line();
             self.invalidate_block();
         }
     }
@@ -162,6 +203,7 @@ impl Buffer {
             line: cursor_line + 1,
             col: left_margin.saturating_sub(1).max(0),
         };
+        self.follow_cursor_line();
         self.invalidate_block();
     }
 
@@ -170,6 +212,7 @@ impl Buffer {
         if self.cursor.line + 1 < self.lines.len() {
             let next = self.lines.remove(self.cursor.line + 1);
             self.lines[self.cursor.line].push_str(&next);
+            self.reset_undo_baseline();
             self.invalidate_block();
         }
     }
@@ -182,6 +225,7 @@ impl Buffer {
             self.lines[0].clear();
             self.cursor.col = 0;
             self.invalidate_block();
+            self.reset_undo_baseline();
             return if was_last { Some("Last line deleted") } else { None };
         }
         self.lines.remove(self.cursor.line);
@@ -190,6 +234,7 @@ impl Buffer {
         }
         self.cursor.col = 0;
         self.invalidate_block();
+        self.reset_undo_baseline();
         if was_last {
             Some("Last line deleted")
         } else {
@@ -205,6 +250,7 @@ impl Buffer {
         self.lines.insert(at, text.to_string());
         self.cursor.line = at;
         self.cursor.col = 0;
+        self.follow_cursor_line();
         self.invalidate_block();
     }
 
@@ -212,6 +258,7 @@ impl Buffer {
     pub fn insert_before(&mut self, text: &str) {
         self.lines.insert(self.cursor.line, text.to_string());
         self.cursor.line += 1;
+        self.follow_cursor_line();
         self.invalidate_block();
     }
 
@@ -235,6 +282,7 @@ impl Buffer {
             self.cursor.line = self.lines.len() - 1;
         }
         self.cursor.col = self.cursor.col.min(self.lines[self.cursor.line].chars().count());
+        self.reset_undo_baseline();
         self.invalidate_block();
         Ok(())
     }

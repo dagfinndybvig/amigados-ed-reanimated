@@ -374,10 +374,12 @@ impl Editor {
                 b.cursor.line = 0;
                 b.cursor.col = 0;
                 b.top = 0;
+                b.follow_cursor_line();
             }
             ("B", Arg::None) => {
                 b.cursor.line = b.line_count() - 1;
                 b.cursor.col = 0;
+                b.follow_cursor_line();
             }
             ("N", Arg::None) => {
                 if b.cursor.line + 1 >= b.line_count() {
@@ -386,6 +388,7 @@ impl Editor {
                 } else {
                     b.cursor.line += 1;
                     b.cursor.col = 0;
+                    b.follow_cursor_line();
                 }
             }
             ("P", Arg::None) => {
@@ -395,6 +398,7 @@ impl Editor {
                 } else {
                     b.cursor.line -= 1;
                     b.cursor.col = 0;
+                    b.follow_cursor_line();
                 }
             }
             ("M", Arg::Num(n)) => {
@@ -405,6 +409,7 @@ impl Editor {
                 } else {
                     b.cursor.line = (n - 1) as usize;
                     b.cursor.col = 0;
+                    b.follow_cursor_line();
                 }
             }
             ("CL", Arg::None) => {
@@ -445,6 +450,15 @@ impl Editor {
             ("DC", Arg::None) => {
                 b.delete_at();
                 self.dirty = true;
+            }
+            // --- undo ---
+            ("U", Arg::None) => {
+                // Undo changes made to the current line only (spec
+                // 5.3); the baseline was committed when the cursor
+                // left the line, so this is a no-op then.
+                if b.undo_current_line() {
+                    self.dirty = true;
+                }
             }
             // --- search and exchange ---
             ("F", Arg::Str(s)) => {
@@ -498,6 +512,7 @@ impl Editor {
                     b.top = s;
                     b.cursor.line = s;
                     b.cursor.col = 0;
+                    b.follow_cursor_line();
                 } else {
                     result.error = true;
                     result.message = Some("No block marked".to_string());
@@ -601,6 +616,7 @@ impl Editor {
             if let Some(pos) = find_in(text, needle, from, self.case_insensitive) {
                 b.cursor.line = l;
                 b.cursor.col = pos;
+                b.follow_cursor_line();
                 return true;
             }
         }
@@ -629,6 +645,7 @@ impl Editor {
                 if let Some(pos) = find_in(text, needle, from, self.case_insensitive) {
                     b.cursor.line = l;
                     b.cursor.col = pos;
+                    b.follow_cursor_line();
                     return true;
                 }
             }
@@ -649,6 +666,7 @@ impl Editor {
             if let Some(pos) = rfind_in(text, needle, from, self.case_insensitive) {
                 b.cursor.line = l;
                 b.cursor.col = pos;
+                b.follow_cursor_line();
                 return true;
             }
         }

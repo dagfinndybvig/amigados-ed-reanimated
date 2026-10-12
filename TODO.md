@@ -180,6 +180,12 @@ scriptable pattern analysis; full listing at emulator/ed.asm, 6417 lines).
 - [-] CRLF files: `\r` is kept as an ordinary character (Amiga
       convention is LF); documented in MANUAL.md §9 — decide whether
       load should normalize CRLF
+- [x] U (undo current line) implemented from spec 5.3 — entry-baseline
+      model: the baseline resets whenever the cursor enters a line,
+      so leaving the line commits the edit; no resurrection of
+      deleted/split/joined lines. 4 new tests; headless --script
+      verification passed. With U the clone's "38 commands" claim is
+      now literally true (U was the one missing command)
 - [x] Known --script limitations documented (Q skips confirmation,
       EQ never applies; MANUAL.md §6/§9)
 

@@ -296,6 +296,7 @@ legal: `A ::` inserts a blank line.
 | `J` | Join the current line with the next line |
 | `D` | Delete the current line |
 | `DC` | Delete the character at the cursor |
+| `U` | Undo changes made to the current line only |
 
 `A` moves the cursor to the newly inserted line, so consecutive `A`
 commands insert in reading order.
@@ -540,4 +541,9 @@ modern host.
     implemented yet; the other SH fields are accurate.
 12. **Messages persist on the status line** until your next command.
     A stale "search failed" from minutes ago is normal.
+13. **`U` undoes only the current line, only until you leave it.**
+    Ed keeps a copy of the line you are on; the moment the cursor
+    leaves the line (or the line is deleted, split, or joined), the
+    changes are committed and `U` restores nothing. `U` never
+    resurrects a deleted line.
 
