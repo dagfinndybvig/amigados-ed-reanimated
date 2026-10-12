@@ -81,6 +81,64 @@ runtime.
 - [ ] Trace DOS packet I/O with the emulator debugger (breakpoints on
       file reads/writes during startup and save)
 
+## 6b. Emulator input crisis (2026-10-12 evening — OPEN)
+
+Interactive verification is currently BLOCKED by an emulator input
+problem on this machine. Everything below was established by experiment:
+
+**Symptom matrix:**
+
+| Path | Result |
+|---|---|
+| Amiga boots, renders, blinks, runs our patched startup | works (all builds) |
+| Screenshot/OCR automation (nofocusshot + cropocr/ocrbox) | works |
+| User physical keyboard → emulation | dead (Ed AND the 1> CLI) |
+| User physical mouse → Amiga (clicks on icons) | dead ("mouse integration not working well" in AF too) |
+| Synthetic SendInput keyboard (sendkeys_fg) | dead (SendKeys itself proven OK elsewhere) |
+| PostMessage WM_KEYDOWN (postkeys.ps1) | reaches the GUI, NOT the emulation (raw-input path) |
+| Host-level mouse (title bar drag, GUI) | works |
+| WinUAE F12 settings GUI | opens (at least once) |
+
+Tested on BOTH the AF-bundled winuae64.exe and the official
+open-source WinUAE 6.0.3 (downloaded to emulator/winuae-oss/). Not a
+WinUAE-config problem (inactive_pause etc. were set and verified),
+not an Amiga problem (boots fully with blinking cursor).
+
+**Root-cause suspects (unresolved):**
+
+- A stuck "Windows Input Experience" overlay window (pid 1956)
+  covering the whole 3440x1440 desktop, visible — may be eating raw
+  input. Check after a reboot.
+- Something machine-level changed between Oct 11 (everything worked,
+  AF player + automation) and Oct 12. Reboot is the obvious first
+  fix to try.
+
+**Other findings from the session (valuable, keep):**
+
+- ed-verify.uae's kick.rom is Kickstart 3.1 (header 0x1114, 512KB),
+  NOT 1.3 — that config is the "Ed crashes under KS 3.1" experiment;
+  Ed 1.14 fails there with error #87000004. Never use it for live
+  Ed work. KS 1.3 = emulator/kick13.rom.
+- Patched-boot-disk pipeline VERIFIED LIVE: adf_patch.py edits hold
+  (marker text "MARKERZZ 775" appeared in the boot CLI; List s:
+  output rendered). Patched disks: edboot-exist*.adf, edboot-marker*.
+- edboot-shell.adf drops to an INTERACTIVE CLI (EndCLI removed) —
+  the right base for any future interactive session.
+- AmigaDOS lock gotcha: Ed cannot open the startup-sequence file
+  while it is executing (exclusive locks) → "Creating new file".
+  Edit a copy or an unused file instead.
+- OSS WinUAE configs: atest3.uae (KS 1.3 + sound off + pause
+  options) is the known-good boot config; start-ed.bat launches it.
+
+**Next steps for interactive verification:**
+
+1. Reboot the machine; retry the AF player (yesterday's flow). If
+   keyboard works again, run the A-command test immediately.
+2. If still dead, check the Windows Input Experience window state,
+   try a different user session, or test on another machine.
+3. The pending live items (A-command cursor, M n, groups/RP, U undo
+   live check, IF/WB, differential testing) all depend on this.
+
 ## 7. Disassembly pass (IN PROGRESS)
 
 Tooling: Capstone m68k via tools/disasm_ed.py (chosen over Ghidra/IRA for
