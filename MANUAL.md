@@ -9,6 +9,49 @@ Amiga required.
 
 ---
 
+## 0. About this project
+
+Neo-Ed is the product of a **learning and historical preservation
+project**: understanding how a real 1980s commercial program worked,
+by legally reverse engineering it and reimplementing it from scratch.
+It is not a product, a competitor, or a replacement for the original.
+
+**How this was done (and why it's legal):**
+
+- The original Ed 1.14 binary was obtained from the author's own
+  licensed copy of Cloanto's *Amiga Forever* (the current rights
+  holder for classic AmigaOS). No leaked source code was ever accessed.
+- The binary was statically analyzed (disassembly) and dynamically
+  observed in an emulator to document its behavior. This is permitted
+  in the US (*Sega v. Accolade*, DMCA §1201(f)), the EU (Directive
+  2009/24/EC), and the UK (CDPA ss.50A–50BA).
+- A **behavior specification** was written in our own words, describing
+  only functional behavior — command names, limits, file formats,
+  message texts — none of which are copyrightable expression.
+- The Rust implementation was then written **from the specification
+  alone**, with no reference to the original code, in accordance with
+  clean-room methodology.
+- No AmigaOS code, ROM images, or proprietary material is included
+  in this repository or in the Neo-Ed binary.
+
+The full legal analysis is in [LEGAL.md](LEGAL.md). The complete
+behavior specification with evidence tags is in
+[docs/ed-spec.md](docs/ed-spec.md). The reverse-engineering process
+and all BCPL-related findings are documented in [README.md](README.md)
+and [BCPL.md](BCPL.md).
+
+**Why preserve Ed?**
+
+Ed is a small, elegant program from the era when software shipped on
+a single floppy disk and did one thing well. Its command language
+(repeat counts, nested groups, recursive search-and-exchange) is a
+masterpiece of economy. By understanding it, we learn not just what
+a 1988 editor did, but how software was designed when memory was
+scarce, CPUs were slow, and every byte counted. That knowledge is
+worth preserving.
+
+---
+
 ## 1. Introduction
 
 Neo-Ed is a screen editor. You see your text on screen and edit it
