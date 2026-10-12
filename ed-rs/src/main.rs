@@ -6,6 +6,7 @@
 
 mod buffer;
 mod cmdline;
+mod gui;
 mod headless;
 mod screen;
 
@@ -133,10 +134,10 @@ fn main() -> ExitCode {
         return ExitCode::SUCCESS;
     }
 
-    match screen::run_loop(&mut ed) {
+    match gui::run(ed) {
         Ok(()) => ExitCode::SUCCESS,
         Err(e) => {
-            eprintln!("terminal error: {}", e);
+            eprintln!("window error: {}", e);
             ExitCode::FAILURE
         }
     }

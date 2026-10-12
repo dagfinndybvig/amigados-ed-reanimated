@@ -1,8 +1,8 @@
 //! Full-screen terminal UI for the Ed reimplementation (crossterm).
 //!
-//! Renders a fixed-size window like the original Ed's own console
-//! window ("Ed 1.14"): a title bar, 10 text lines, and a status line
-//! at the bottom of the window.
+//! The testable editor state machine: maps a key press to a new mode
+//! and a decision (continue or quit). Rendering and windowing live in
+//! `gui.rs` (native window) and `headless.rs` (script mode).
 //!
 //! Faithful to the behavior spec (docs/ed-spec.md):
 //! - bottom line is the status/message line; messages persist until the
@@ -13,32 +13,11 @@
 //! - X exits with save; Q exits without save (with confirmation if
 //!   there are unsaved edits)
 
-use crate::buffer::Buffer;
 use crate::cmdline::{self, Editor};
-use crossterm::{
-    cursor::{MoveTo, Show},
-    event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers},
-    execute, queue,
-    style::{Print, ResetColor, SetBackgroundColor, SetForegroundColor},
-    terminal::{self, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen},
-};
-use std::io::{self, Result as CResult, Stdout, Write};
-
-/// One extra row for the status line.
-const STATUS_ROW: u16 = 1;
-
-/// Window title, like the original's "Ed 1.14" title bar.
-const TITLE: &str = " Neo-Ed";
-
-/// Text lines visible inside the window. The original Ed opened a
-/// 640x200 window (~12 text lines at the 8x16 font); we use 10.
-const TEXT_ROWS: u16 = 10;
-
-/// Full window height: title bar + text rows + status line.
-const WINDOW_ROWS: u16 = TEXT_ROWS + STATUS_ROW + 1;
+use crossterm::event::{KeyCode, KeyModifiers};
 
 /// Prompt shown when quitting would discard unsaved edits (spec 5.4).
-const CONFIRM_PROMPT: &str = "Edits will be lost - type Y to confirm: ";
+pub const CONFIRM_PROMPT: &str = "Edits will be lost - type Y to confirm: ";
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Mode {
@@ -54,151 +33,6 @@ pub enum Mode {
 pub enum Decision {
     Continue,
     Quit { save: bool },
-}
-
-pub struct Screen {
-    stdout: Stdout,
-    pub rows: u16,
-    pub cols: u16,
-}
-
-impl Screen {
-    pub fn new() -> CResult<Self> {
-        let mut stdout = io::stdout();
-        execute!(stdout, EnterAlternateScreen)?;
-        terminal::enable_raw_mode()?;
-        let (cols, rows) = terminal::size()?;
-        Ok(Screen { stdout, rows, cols })
-    }
-
-    pub fn cleanup(&mut self) -> CResult<()> {
-        terminal::disable_raw_mode()?;
-        execute!(self.stdout, Show, LeaveAlternateScreen)
-    }
-
-    pub fn resize(&mut self) {
-        if let Ok((c, r)) = terminal::size() {
-            self.cols = c;
-            self.rows = r;
-        }
-    }
-
-    /// Total window height (title + text + status), clamped to the
-    /// terminal size on very small terminals.
-    pub fn window_rows(&self) -> u16 {
-        self.rows.min(WINDOW_ROWS)
-    }
-
-    /// Text rows visible inside the window (between title and status).
-    pub fn text_rows(&self) -> usize {
-        self.window_rows().saturating_sub(STATUS_ROW + 1) as usize
-    }
-
-    pub fn render(
-        &mut self,
-        ed: &Editor,
-        mode: &Mode,
-        message: &Option<String>,
-    ) -> io::Result<()> {
-        queue!(self.stdout, Clear(ClearType::All))?;
-        let b = &ed.buffer;
-        let text_rows = self.text_rows();
-        let status_row = self.window_rows() - STATUS_ROW;
-        let top = b.top;
-
-        // title bar (row 0): white on black, like an Amiga window title
-        queue!(
-            self.stdout,
-            MoveTo(0, 0),
-            SetBackgroundColor(crossterm::style::Color::White),
-            SetForegroundColor(crossterm::style::Color::Black),
-            Print(format!("{:<width$}", TITLE, width = self.cols as usize)),
-            ResetColor,
-        )?;
-
-        // draw visible lines
-        for (row, i) in (top..b.line_count()).enumerate() {
-            if row >= text_rows {
-                break;
-            }
-            let line = &b.lines[i];
-            let chars: Vec<char> = line.chars().collect();
-            let visible: String = chars.iter().skip(b.left).take(self.cols as usize).collect();
-            queue!(self.stdout, MoveTo(0, row as u16 + 1), Print(&visible))?;
-        }
-
-        // status line (bottom)
-        let status: String = match mode {
-            Mode::Extended(s) => format!("*{}", s),
-            Mode::QuitConfirm => "Edits will be lost - type Y to confirm: ".to_string(),
-            Mode::ExchangeConfirm => "Exchange? ".to_string(),
-            Mode::ShDisplay => "Type any character to continue ".to_string(),
-            Mode::Immediate => message
-                .as_ref()
-                .map(|m| m.clone())
-                .or_else(|| ed.last_message.clone())
-                .unwrap_or_default(),
-        };
-        // status line (bottom of the window, reverse video like the
-        // title bar so the window edge is clearly visible)
-        queue!(
-            self.stdout,
-            MoveTo(0, status_row),
-            SetBackgroundColor(crossterm::style::Color::White),
-            SetForegroundColor(crossterm::style::Color::Black),
-            Print(format!("{:<width$}", status, width = self.cols as usize)),
-            ResetColor,
-        )?;
-
-        // SH display replaces the screen (spec section 7)
-        if matches!(mode, Mode::ShDisplay) {
-            let sh = ed.sh_text();
-            queue!(self.stdout, Clear(ClearType::All))?;
-            for (row, line) in sh.lines().enumerate() {
-                if row >= text_rows {
-                    break;
-                }
-                queue!(self.stdout, MoveTo(0, row as u16 + 1), Print(line))?;
-            }
-            queue!(
-                self.stdout,
-                MoveTo(0, status_row),
-                SetBackgroundColor(crossterm::style::Color::White),
-                SetForegroundColor(crossterm::style::Color::Black),
-                Print(format!(
-                    "{:<width$}",
-                    "Type any character to continue ",
-                    width = self.cols as usize
-                )),
-                ResetColor,
-            )?;
-            // rest the visible cursor just after the continue prompt
-            queue!(self.stdout, MoveTo(33, status_row))?;
-            self.stdout.flush()?;
-            return Ok(());
-        }
-
-        // cursor position
-        let screen_row = b.cursor.line.saturating_sub(top) as u16 + 1;
-        let screen_col = b.cursor.col.saturating_sub(b.left) as u16;
-        queue!(self.stdout, MoveTo(screen_col, screen_row))?;
-        self.stdout.flush()
-    }
-
-    pub fn scroll_follow(&mut self, b: &mut Buffer) {
-        let text_rows = self.text_rows();
-        if b.cursor.line < b.top {
-            b.top = b.cursor.line;
-        } else if b.cursor.line >= b.top + text_rows {
-            b.top = b.cursor.line + 1 - text_rows;
-        }
-        let cols = self.cols as usize;
-        if b.cursor.col < b.left {
-            b.left = (b.cursor.col / 10) * 10;
-        } else if b.cursor.col >= b.left + cols {
-            b.left = ((b.cursor.col + 1 - cols) / 10) * 10 + 10;
-        }
-    }
 }
 
 /// Handle a key press in immediate mode. Returns (new_mode, quit).
@@ -446,7 +280,7 @@ fn exec_command_line(ed: &mut Editor, line: &str) -> (bool, bool) {
 }
 
 /// Save the FROM file and the backup (spec section 6, corrected).
-fn save_files(ed: &Editor) {
+pub fn save_files(ed: &Editor) {
     let text = ed.buffer.to_text();
     let _ = std::fs::write(&ed.from_file, &text);
     let backup = std::path::Path::new("t").join("ed-backup");
@@ -461,7 +295,7 @@ fn save_files(ed: &Editor) {
 /// This is the testable core of the TUI: no terminal I/O happens here,
 /// all rendering and saving stays in run_loop. Returns the new mode,
 /// what the loop should do next, and a message for the status line.
-fn process_key(
+pub fn process_key(
     ed: &mut Editor,
     mode: Mode,
     code: KeyCode,
@@ -568,50 +402,6 @@ fn process_key(
     }
 
     (mode, Decision::Continue, message)
-}
-
-/// Run the interactive editor loop.
-pub fn run_loop(ed: &mut Editor) -> CResult<()> {
-    let mut screen = Screen::new()?;
-    let mut mode = Mode::Immediate;
-    let mut message: Option<String> = None;
-    let mut last_command: String = String::new();
-
-    loop {
-        screen.resize();
-        screen.scroll_follow(&mut ed.buffer);
-        screen.render(ed, &mode, &message)?;
-        message = None;
-        ed.last_message = None;
-
-        let ev = event::read()?;
-        if let Event::Key(KeyEvent { code, modifiers, kind, .. }) = ev {
-            if kind == KeyEventKind::Release {
-                continue;
-            }
-            let window_text_rows = screen.text_rows();
-            let (new_mode, decision, msg) = process_key(
-                ed,
-                mode,
-                code,
-                modifiers,
-                window_text_rows,
-                &mut last_command,
-            );
-            mode = new_mode;
-            message = msg;
-            match decision {
-                Decision::Quit { save } => {
-                    if save {
-                        save_files(ed);
-                    }
-                    screen.cleanup()?;
-                    return Ok(());
-                }
-                Decision::Continue => {}
-            }
-        }
-    }
 }
 
 fn char_to_byte(s: &str, ci: usize) -> usize {

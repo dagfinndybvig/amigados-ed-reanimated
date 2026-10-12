@@ -107,7 +107,8 @@ ed-rs/        the clean-room Rust reimplementation (the clone)
   src/
     buffer.rs    line-buffer model (255-char lines, block marks, wrap)
     cmdline.rs   extended command parser + executor (38 commands)
-    screen.rs    full-screen TUI (crossterm)
+    screen.rs    testable editor state machine (key -> mode/decision)
+    gui.rs       native window (eframe/egui), 640x200, closes on quit
     headless.rs  --script mode for non-interactive testing
     main.rs      CLI entry, FROM/A,SIZE template
 tools/
@@ -149,14 +150,14 @@ emulator/     emulator, ROM, disk images, configs, screenshots
 - **Rust MVP (ed-rs/)**: clean-room command engine with the full 38-command
   set, buffer model, block semantics, SH display, save/backup, verified
   message set, and a headless `--script` mode for testing. Command engine
-  proven by scripted smoke tests; TUI state machine covered by unit tests and verified live in a real console (rendering, typing, EQ/Q confirm flows, X save). Run `cargo test` inside `ed-rs/`.
+  proven by scripted smoke tests; the editor state machine is covered by unit tests, and the native window renders the editor and closes on quit. Run `cargo test` inside `ed-rs/`.
 - Runtime slot naming parked (not needed for the MVP; documented in TODO
   section 7 with resume instructions).
 
 ## Running the clone
 
 **Prerequisites:** [Rust](https://rustup.rs) (any recent stable; the
-`crossterm` crate is the only dependency). No Amiga ROMs or emulator
+`eframe`/`egui` (native window) and `crossterm` (key codes) are the dependencies). No Amiga ROMs or emulator
 needed — the clone is a native Windows/Linux/macOS binary.
 
 **Build:**
@@ -189,9 +190,9 @@ ed.exe myfile.txt 50000
 ed.exe --script commands.ed myfile.txt
 ```
 
-Note: the TUI needs a real terminal — with stdin or stdout piped it
-will hang. Use `--script` for non-interactive runs. MANUAL.md section
-9 collects the full list of gotchas.
+Note: the editor opens its own native window (640x200, matching the
+original Ed screen). Use `--script` for non-interactive runs. MANUAL.md
+section 9 collects the full list of gotchas.
 
 **In the editor:**
 

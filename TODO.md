@@ -370,6 +370,11 @@ scriptable pattern analysis; full listing at emulator/ed.asm, 6417 lines).
       now visible throughout; status line and the SH continue prompt
       are reverse video like the title bar, so the bottom edge of
       the window is clearly visible
+- [x] Native window rewrite (2026-10-13): replaced the in-terminal
+      crossterm TUI with an eframe/egui native window sized 640x200
+      (the original's RAW:0/0/639/199 screen), titled "Neo-Ed", that
+      closes when the editor quits. The testable process_key state
+      machine and --script headless mode are unchanged; 21 tests pass
 - [ ] Differential testing against original in emulator (deferred
       until MVP exists)
 - [ ] SH display: Buffer usage field always reads 000% (size

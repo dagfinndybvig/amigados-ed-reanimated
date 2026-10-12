@@ -113,7 +113,7 @@ buffer, you'll see **"File too big"**.
 
 ### 2.2 The screen (the window)
 
-Like the original Ed, which opened its own small console window titled "Ed 1.14", Neo-Ed draws a fixed-size window inside your terminal:
+Like the original Ed, which opened its own small console window titled "Ed 1.14", Neo-Ed opens its own native window (640x200, matching the original's RAW:0/0/639/199 screen):
 
 ```text
 +------------------------------------------+
@@ -132,7 +132,7 @@ The bottom row of the window is the **status line**. It shows:
 - Prompts like **"Exchange? "** or **"Edits will be lost - type Y to
   confirm: "**
 
-The window shows 10 lines of text between the title bar and the status line. The title bar and the status line are both drawn highlighted (white on black), like the original's Amiga window furniture, so the top and bottom edges of the window are always clearly visible; everything outside the window stays blank. The cursor blinks in the text area at your editing position. CTRL-D and CTRL-U scroll the text by one window (10 lines), and CTRL-E jumps between the top and bottom of the window. On a terminal smaller than 12 rows, the window shrinks to fit.
+The window shows 10 lines of text between the title bar and the status line. The title bar and the status line are both drawn highlighted (white on black), like the original's Amiga window furniture, so the top and bottom edges of the window are always clearly visible. The cursor is shown in the text area at your editing position. CTRL-D and CTRL-U scroll the text by one window (10 lines), and CTRL-E jumps between the top and bottom of the window.
 
 ### 2.3 Leaving Neo-Ed
 
@@ -481,8 +481,9 @@ specification derived by legal reverse engineering, not from the
 original source code. It matches the original's behavior everywhere
 we could verify, with these deliberate differences:
 
-1. **Native terminal**, not an Amiga RAW: console window. It uses your
-   terminal's native keyboard and display.
+1. **Native window**, not an Amiga RAW: console window. It opens its
+   own 640x200 window (matching the original's RAW:0/0/639/199 screen)
+   and closes when you quit.
 2. **No Workbench integration** — no icons, no Intuition screens.
 3. **Cross-platform** — Windows, Linux, macOS.
 4. **Word-pointer transparency** — the original's BCPL word-pointer
@@ -522,10 +523,9 @@ Things that surprise people. Most are inherited from the original Ed
 1.14; a few are consequences of running a 1988 terminal program on a
 modern host.
 
-1. **The TUI needs a real terminal.** Running `ed` with stdin or
-   stdout redirected (a pipe, `ed file < input`, `echo | ed file`)
-   does not work: the terminal layer reads the console device
-   directly and the editor will appear to hang. For non-interactive
+1. **The editor opens its own native window.** Running `ed` with stdin
+   or stdout redirected (a pipe, `ed file < input`, `echo | ed file`)
+   does not work: the window needs a real display. For non-interactive
    use, use `--script` (section 6).
 2. **`--script` cannot ask questions.** `Q` exits without the
    confirmation prompt, and `EQ` never applies its exchanges (see
