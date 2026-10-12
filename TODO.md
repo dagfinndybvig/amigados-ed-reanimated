@@ -103,25 +103,13 @@ scriptable pattern analysis; full listing at emulator/ed.asm, 6417 lines).
 - [x] Call census (tools/call_census.py): 545 jsr (a5) sites, 19 distinct
       slot offsets (12..120 = globvec entries 3..30) — Ed's complete
       runtime API surface
-- [ ] Name the runtime functions — session state (2026-10-11 night):
-      - Convention CORRECTED (see spec 5.5): jsr (a5) = CALLPROC with the
-        procedure pointer in a4 from (a2) globals; d0-d3 = args; the old
-        "19 function numbers" reading was wrong — redo the census keyed
-        on (a2) global offsets
-      - Dump-tool campaign (gvdump v2, hand-assembled m68k, capstone-
-        verified, in tools/make_gvdump.py): writes DosLibrary.dl_GV
-        (1024 bytes) to DF0:gv.dump; injected as Utilities/Calculator on
-        edboot6.adf, run from the patched startup-sequence BEFORE Ed
-      - Tool v1 lessons: 1.x ATRM load-file container required (not the
-        modern hunk numbering); Shell does NOT enter commands with
-        A6=DOSBase (guru); v2 derives ExecBase from [4] and opens
-        dos.library via exec LVO -552 itself
-      - Two boots so far: no gv.dump yet — boot may not have reached
-        Calculator before shutdown (StartupII wait), or a further
-        failure; check the console screenshots (emulator/boot6*.png)
-      - NEXT: boot edboot6.adf, wait 2.5+ min, stop WinUAE, extract
-        adf, look for gv.dump; if present parse against kick13.rom's
-        dos.library LVO jump table to name the slots
+- [~] Runtime slot naming — PARKED (not needed for the MVP; see 9).
+      Last state: gvdump tool v0 (return) and v3 (OpenLibrary) run clean;
+      v4 (stack args), v5 (reversed stack), v6 (register args) all crash.
+      Next step if ever resumed: read the actual 1.3 dos.library LVO
+      entry code from kick13.rom to settle the ABI, instead of guessing.
+- [ ] Immediate/CTRL-key dispatch (seg8): letters via moveq + globvec
+      call 28; tabulate the full key map
 - [ ] Immediate/CTRL-key dispatch (seg8): letters via moveq + globvec
       call 28; tabulate the full key map
 - [ ] Right-margin default: SH live readback says 077; no 0x4f (79)
@@ -160,14 +148,26 @@ scriptable pattern analysis; full listing at emulator/ed.asm, 6417 lines).
       command set against the 1991 manual's list
 - [ ] Write version-history section (1.10 → 1.14 → 2.x → 3.1)
 
-## 9. Clean-room reimplementation in Rust (OPTIONAL — do not start before
-      sections 6–7 are complete)
+## 9. Clean-room reimplementation in Rust (IN PROGRESS — started
+      2026-10-12, after decision that the MVP does not need the parked
+      runtime-internals work)
 
-- [ ] Target language: Rust (decided); portable console clone
-- [ ] Freeze the spec as the clean-room input
-- [ ] Implement from the spec only (see LEGAL.md §6)
-- [ ] Differential testing against original in emulator: same inputs,
-      compare outputs/behavior
+- [x] Target language: Rust (decided); portable console clone
+- [x] Spec is the sole input (LEGAL.md §6 clean-room rule); spec is
+      behavior-complete enough for an MVP (commands, screen model,
+      buffer limits, margins, block semantics, save/backup, messages)
+- [x] ed-rs MVP command engine: all 38 commands, semicolons, repeat
+      counts, nested groups, RP loops, block semantics, SH display,
+      X/Q/SA/IF/WB, t/ed-backup relative to cwd, verified message set
+- [x] Headless --script mode for testing (proven by scripted smoke
+      tests: E exchange, RP groups, SH readback, X save + backup)
+- [ ] TUI interactive testing (compiles; needs a live session to
+      verify screen rendering, immediate keys, EQ confirm flow)
+- [ ] Verify A-command cursor behavior: current implementation leaves
+      cursor on the current line (consecutive A's insert in LIFO);
+      needs live verification against the original
+- [ ] Differential testing against original in emulator (deferred
+      until MVP exists)
 
 ## 10. Open questions
 

@@ -118,8 +118,12 @@ af-extract/   administrative (no-install) extract of the Amiga Forever MSI
   pointer in `a4`); segment roles mapped; template corrected to
   `FROM/A,SIZE`; two manual-vs-binary discrepancies documented (right
   margin 077 not 79; SIZE floor 10000 not 40000).
-- In progress: naming the runtime procedure slots via a hand-assembled
-  memory-dump tool injected into the boot disk (see TODO section 7).
+- **Rust MVP (ed-rs/)**: clean-room command engine with the full 38-command
+  set, buffer model, block semantics, SH display, save/backup, verified
+  message set, and a headless `--script` mode for testing. Command engine
+  proven by scripted smoke tests; TUI compiles, interactive testing pending.
+- Runtime slot naming parked (not needed for the MVP; documented in TODO
+  section 7 with resume instructions).
 
 ## Roadmap
 
@@ -127,9 +131,10 @@ af-extract/   administrative (no-install) extract of the Amiga Forever MSI
 - [x] Binary extraction and triage
 - [x] Behavior spec draft
 - [x] Dynamic verification in an emulator (genuine KS 1.3)
-- [x] Disassembly pass: command dispatch verified, calling convention reconstructed (slot naming in progress)
+- [x] Disassembly pass: command dispatch verified, calling convention reconstructed
+- [x] Clean-room Rust MVP: command engine + buffer + save/backup (TUI interactive testing pending)
+- [ ] Differential testing: Rust clone vs original in emulator
 - [ ] Version comparison (Ed 1.10 / 1.14 / 2.x / 3.1)
-- [ ] (Optional) clean-room reimplementation in Rust + differential testing
 
 ## License
 
