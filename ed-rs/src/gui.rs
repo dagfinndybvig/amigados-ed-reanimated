@@ -1,10 +1,12 @@
 //! Native window backend for Neo-Ed (eframe/egui).
 //!
-//! Opens a separate window sized to the original Ed screen (640x200,
-//! the `RAW:0/0/639/199` window from Ed 1.14), renders the editor, and
-//! closes the window when the editor quits. The testable state machine
-//! lives in `screen.rs`; this module only maps egui input to it and
-//! draws the result.
+//! Opens a separate window: 640 pixels wide like the original Ed
+//! screen (`RAW:0/0/639/199`), and tall enough for TEXT_ROWS text
+//! rows (a deliberate readability deviation from the original's
+//! 200-pixel ten-row window). Renders the editor and closes the
+//! window when the editor quits. The testable state machine lives in
+//! `screen.rs`; this module only maps egui input to it and draws
+//! the result.
 
 use crate::buffer::Buffer;
 use crate::cmdline::Editor;
@@ -13,7 +15,16 @@ use crossterm::event::{KeyCode, KeyModifiers};
 use eframe::egui;
 
 /// Text lines visible inside the window (between title and status).
-const TEXT_ROWS: usize = 10;
+const TEXT_ROWS: usize = 20;
+
+/// Target row height in points, like the original's 8x16 font.
+const ROW_H: f32 = 16.0;
+
+/// Window width, like the original Ed screen (RAW:0/0/639/199).
+const SCREEN_W: f32 = 640.0;
+
+/// Window height: title bar + TEXT_ROWS rows + status line + padding.
+const SCREEN_H: f32 = (TEXT_ROWS as f32 + 2.0) * ROW_H + 8.0;
 
 /// Title-bar text: a key hint, drawn highlighted like the original's
 /// "Ed 1.14" title bar.
@@ -22,10 +33,6 @@ const TITLE: &str = " ESC for control";
 /// Mild blue background for the reverse-video fields (title bar and
 /// status line); text on them stays black.
 const REV_VIDEO_BG: egui::Color32 = egui::Color32::from_rgb(0x6F, 0xA8, 0xDC);
-
-/// Original Ed screen size in pixels (RAW:0/0/639/199).
-const SCREEN_W: f32 = 640.0;
-const SCREEN_H: f32 = 200.0;
 
 /// Prompt shown when the window close button is clicked with unsaved
 /// edits. Y saves and closes; N closes without saving; any other key

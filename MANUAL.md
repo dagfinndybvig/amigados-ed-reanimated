@@ -114,14 +114,16 @@ buffer, you'll see **"File too big"**.
 
 ### 2.2 The screen (the window)
 
-Like the original Ed, which opened its own small console window titled "Ed 1.14", Neo-Ed opens its own native window (640x200, matching the original's RAW:0/0/639/199 screen):
+Like the original Ed, which opened its own small console window titled "Ed 1.14", Neo-Ed opens its own native window (640 pixels wide, like the original's
+RAW:0/0/639/199 screen, and 360 pixels tall so 20 text rows fit - a
+deliberate deviation from the original's ten-row, 200-pixel window):
 
 ```text
 +------------------------------------------+
 | ESC for control                          |  title bar
 | first line of your text                  |
 | ...                                      |
-| tenth line of your text                  |
+| twentieth line of your text              |
 | status line                              |
 +------------------------------------------+
 ```
@@ -136,7 +138,7 @@ The bottom row of the window is the **status line**. It shows:
 - Prompts like **"Exchange? "** or **"Edits will be lost - type Y to
   confirm: "**
 
-The window shows 10 lines of text between the title bar and the status line. The title bar and the status line are both drawn highlighted (mild blue with black text), like the original's Amiga window furniture, so the top and bottom edges of the window are always clearly visible. The cursor blinks in the text area at your editing position. CTRL-D and CTRL-U scroll the text by one window (10 lines), and CTRL-E jumps between the top and bottom of the window.
+The window shows 20 lines of text between the title bar and the status line. The title bar and the status line are both drawn highlighted (mild blue with black text), like the original's Amiga window furniture, so the top and bottom edges of the window are always clearly visible. The cursor blinks in the text area at your editing position. CTRL-D and CTRL-U scroll the text by one window (20 lines), and CTRL-E jumps between the top and bottom of the window.
 
 ### 2.3 Leaving Neo-Ed
 
@@ -230,8 +232,8 @@ deleted"**.
 
 | Key | Scrolls |
 |---|---|
-| CTRL-D | One window (10 lines) toward the beginning |
-| CTRL-U | One window (10 lines) toward the end |
+| CTRL-D | One window (20 lines) toward the beginning |
+| CTRL-U | One window (20 lines) toward the end |
 | CTRL-V | Redraw the entire screen |
 
 ### 3.6 Changing case
@@ -493,8 +495,9 @@ original source code. It matches the original's behavior everywhere
 we could verify, with these deliberate differences:
 
 1. **Native window**, not an Amiga RAW: console window. It opens its
-   own 640x200 window (matching the original's RAW:0/0/639/199 screen)
-   and closes when you quit.
+   own window: 640 pixels wide like the original's RAW:0/0/639/199
+   screen, but 360 pixels tall for 20 text rows (the original showed
+   ten rows in 200 pixels) — and closes when you quit.
 2. **No Workbench integration** — no icons, no Intuition screens.
 3. **Cross-platform** — Windows, Linux, macOS.
 4. **Word-pointer transparency** — the original's BCPL word-pointer

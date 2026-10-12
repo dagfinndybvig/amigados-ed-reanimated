@@ -399,6 +399,12 @@ scriptable pattern analysis; full listing at emulator/ed.asm, 6417 lines).
       original binary's 10,000; the 10,000 floor is unchanged,
       so explicit SIZE handling stays faithful. README,
       MANUAL sections 2 and 7 updated
+- [x] 20-row window (2026-10-13): TEXT_ROWS 10 -> 20; window height
+      now derived from the row count (title + rows + status at
+      16px rows = 640x360) instead of the original's 640x200
+      ten-row screen - a deliberate readability deviation
+      (MANUAL 7 item 1); CTRL-D/U scroll a 20-line window.
+      25 tests pass; verified live (window height, scroll)
 - [ ] Differential testing against original in emulator (deferred
       until MVP exists)
 - [ ] SH display: Buffer usage field always reads 000% (size

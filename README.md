@@ -108,7 +108,8 @@ ed-rs/        the clean-room Rust reimplementation (the clone)
     buffer.rs    line-buffer model (255-char lines, block marks, wrap)
     cmdline.rs   extended command parser + executor (38 commands)
     screen.rs    testable editor state machine (key -> mode/decision)
-    gui.rs       native window (eframe/egui), 640x200, closes on quit
+    gui.rs       native window (eframe/egui), 640x360, 20 text rows,
+                 closes on quit
     headless.rs  --script mode for non-interactive testing
     main.rs      CLI entry, FROM/A,SIZE template
 tools/
@@ -191,8 +192,8 @@ ed.exe myfile.txt 50000
 ed.exe --script commands.ed myfile.txt
 ```
 
-Note: the editor opens its own native window (640x200, matching the
-original Ed screen). Use `--script` for non-interactive runs. MANUAL.md
+Note: the editor opens its own native window (640 wide like the
+original Ed screen; 360 tall for 20 text rows). Use `--script` for non-interactive runs. MANUAL.md
 section 9 collects the full list of gotchas.
 
 **In the editor:**
