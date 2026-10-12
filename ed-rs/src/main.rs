@@ -102,7 +102,12 @@ fn main() -> ExitCode {
         }
     };
     const FLOOR: usize = 10_000;
-    let size = size.unwrap_or(FLOOR);
+    // Default buffer size: the 1987 manual's figure. The original
+    // binary defaulted (and clamped) to 10,000; we keep the
+    // 10,000 floor so explicit SIZE handling stays faithful,
+    // but default larger for practical modern files.
+    const DEFAULT_SIZE: usize = 40_000;
+    let size = size.unwrap_or(DEFAULT_SIZE);
     if size < FLOOR {
         eprintln!("SIZE of {} too small", size);
         return ExitCode::FAILURE;

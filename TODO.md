@@ -394,6 +394,11 @@ scriptable pattern analysis; full listing at emulator/ed.asm, 6417 lines).
       (vertical one line at a time, horizontal ten characters,
       spec 3) with 4 new unit tests; 25 total. Verified live:
       DOWN x14 keeps the cursor visible on the last row.
+- [x] Practical default (2026-10-13): buffer SIZE now defaults
+      to 40,000 bytes (the 1987 manual's figure) instead of the
+      original binary's 10,000; the 10,000 floor is unchanged,
+      so explicit SIZE handling stays faithful. README,
+      MANUAL sections 2 and 7 updated
 - [ ] Differential testing against original in emulator (deferred
       until MVP exists)
 - [ ] SH display: Buffer usage field always reads 000% (size

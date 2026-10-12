@@ -177,7 +177,8 @@ ed-rs/target/release/ed.exe myfile.txt     # Windows
 ```
 
 **Optional buffer size** (keyword or positional; minimum 10,000 bytes,
-matching the binary's `0x2710` clamp, not the manual's 40,000):
+the binary's `0x2710` clamp; the default is 40,000 bytes - the 1987
+manual's figure, larger than the original binary's 10,000 default):
 
 ```
 ed.exe myfile.txt SIZE 50000

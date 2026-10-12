@@ -103,9 +103,10 @@ or positionally:
 ed myfile.txt 50000
 ```
 
-The minimum buffer size is 10,000 bytes. If you don't specify one, the
-buffer is set to 10,000 bytes (the original Ed clamped at `0x2710`;
-the manual's claim of 40,000 was wrong).
+The minimum buffer size is 10,000 bytes (the original Ed clamped at
+`0x2710`). If you don't specify one, the buffer defaults to 40,000
+bytes - the 1987 manual's figure - instead of the original binary's
+10,000-byte default, a deliberate practical deviation.
 
 If the file contains binary data (null bytes), you'll see **"File
 contains binary"** and the editor won't start. If it's larger than your
@@ -500,6 +501,10 @@ we could verify, with these deliberate differences:
    addressing (byte >> 2) is invisible to the user.
 5. **CTRL-C** — force-quit is handled by the terminal layer, not by
    AmigaDOS signal processing.
+6. **Default buffer size** — 40,000 bytes (the 1987 manual's figure)
+   instead of the original binary's 10,000-byte default, so plain
+   `ed file.txt` handles practical file sizes; `SIZE n` below
+   10,000 is still refused exactly like the original.
 
 Everything else — the command language, the buffer model, the block
 semantics, the margins, the search and exchange behavior, the save
