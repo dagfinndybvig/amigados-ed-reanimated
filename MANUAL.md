@@ -34,7 +34,11 @@ It is not a product, a competitor, or a replacement for the original.
 - No AmigaOS code, ROM images, or proprietary material is included
   in this repository or in the Neo-Ed binary.
 
-The full legal analysis is in [LEGAL.md](LEGAL.md). The complete
+The full legal analysis is in [LEGAL.md](LEGAL.md).
+
+**Distribution:** this repository distributes source code and
+documentation only. Build from source with `cargo build --release`.
+Pre-built binaries may be provided via GitHub Releases in the future. The complete
 behavior specification with evidence tags is in
 [docs/ed-spec.md](docs/ed-spec.md). The reverse-engineering process
 and all BCPL-related findings are documented in [README.md](README.md)

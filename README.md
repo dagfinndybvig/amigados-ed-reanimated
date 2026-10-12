@@ -40,6 +40,14 @@ Technically it is an interesting specimen:
 3. **(Optional) Reimplement** — a clean-room port in Rust built only from
    the spec, differentially tested against the original in an emulator.
 
+**Distribution posture:** this is a research and historical preservation
+project. The repository contains source code and documentation only —
+no pre-built binaries are provided. Build from source with `cargo
+build --release` (see "Running the clone" below). Pre-built GitHub
+releases may be added in the future; the legal analysis supports
+both, but source-only keeps the project clearly in the educational
+and research space.
+
 ## Legal approach
 
 This project is set up to stay on the legal side of the line. The full
@@ -159,7 +167,8 @@ The binary is at `ed-rs/target/release/ed` (`.exe` on Windows).
 
 ```
 ed-rs/target/release/ed myfile.txt          # Linux/macOS
-ed-rs	argetelease\ed.exe myfile.txt     # Windows
+ed-rs	arget
+elease\ed.exe myfile.txt     # Windows
 ```
 
 **Optional buffer size** (keyword or positional; minimum 10,000 bytes,

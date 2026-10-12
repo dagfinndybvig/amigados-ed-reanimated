@@ -162,6 +162,13 @@ If the optional reimplementation proceeds:
 2. Tools in `tools/` are original code and may be published.
 3. The spec in `docs/` is written to be publishable and may be released.
 4. If in doubt about a source or an output, stop and re-read §4 and §5.
+5. **Distribution posture**: the repository contains source code and
+   documentation only; no pre-built binaries are distributed. This is
+   a conservative choice to keep the project clearly within the
+   educational and research space. The legal analysis (§3, §5, §6)
+   supports binary distribution as well — the compiled binary contains
+   no proprietary material — so pre-built releases may be added later
+   without changing the legal posture.
 
 ## 8. Summary of the argument
 
