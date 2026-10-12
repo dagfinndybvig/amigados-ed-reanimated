@@ -381,6 +381,12 @@ scriptable pattern analysis; full listing at emulator/ed.asm, 6417 lines).
       the font row height (not the glyph height) and the font size
       is chosen to fit the 640x200 window; window is non-resizable
       like the original. 21 tests pass
+- [x] GUI bugfix (2026-10-13): status messages (e.g. Unknown command)
+      stuck on the status line forever - the GUI never cleared
+      ed.last_message the way the old crossterm loop did. Now every
+      key press clears it (message persists until the next command,
+      spec 3) and mouse-move events no longer clear messages.
+      Verified live: ESC zz ENTER shows the message, RIGHT clears it.
 - [ ] Differential testing against original in emulator (deferred
       until MVP exists)
 - [ ] SH display: Buffer usage field always reads 000% (size

@@ -102,9 +102,6 @@ impl EdApp {
     fn handle_input(&mut self, ctx: &egui::Context) {
         let events = ctx.input(|i| i.events.clone());
         for event in events {
-            // A new key press clears the previous status message; it
-            // persists until the next command (spec section 3).
-            self.message = None;
             match event {
                 egui::Event::Key {
                     key,
@@ -113,6 +110,11 @@ impl EdApp {
                     ..
                 } => {
                     if pressed {
+                        // A new key press clears the previous status
+                        // message; it persists until the next command
+                        // (spec section 3).
+                        self.message = None;
+                        self.ed.last_message = None;
                         if let Some(code) = map_key(key, modifiers) {
                             if self.close_requested {
                                 self.handle_close_key(code);
@@ -129,6 +131,8 @@ impl EdApp {
                         if c.is_control() {
                             continue;
                         }
+                        self.message = None;
+                        self.ed.last_message = None;
                         if self.close_requested {
                             self.handle_close_key(KeyCode::Char(c));
                         } else {
