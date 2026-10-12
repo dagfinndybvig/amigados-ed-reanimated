@@ -151,16 +151,59 @@ autonomous, input-free pipeline is the way forward:
       (2.0+ feature) — `C:ED RAM:a <s/CLI-Startup` never opened Ed
       (ReadArgs "Bad arguments", swallowed by Failat 100). Test disk
       edboot-atest.adf kept for reference
-3. [ ] NEXT: InputEvent injector — a tiny hand-assembled m68k program
-      (model: tools/make_gvdump.py, which already builds and boots
-      custom segments) that builds IECLASS_RAWKEY InputEvent chains
-      and writes them to input.device via IND_WRITE. Startup runs it
-      right before Ed; Ed then receives our byte stream as real
-      keystrokes. Needs the rawkey code table (A=0x20 ... Z=0x2C,
-      ENTER=0x44, ESC=0x45, SPACE=0x40, digits, slash, semicolon)
-      and press/release event pairs per key. This unlocks the
-      A-command test AND the whole differential suite with zero
-      interactive input.
+3. [~] InputEvent injector (make_inject2.py) � EXTENSIVE PROGRESS
+      2026-10-12/13, one bug from working. State:
+
+      PROVEN LIVE on KS 1.3 (each by boot experiment):
+      - 1.x ATRM single-hunk load files load and run fine (v0,
+        v0pad40/82, redtest, stacktest all clean). The parked
+        campaign conclusion "ABI unresolved" was partly an artifact:
+        the CLI window closes on EndCLI and hides error messages.
+      - Entry = hunk 0 offset 0; rts return works; d0 at rts is the
+        CLI return code (must be 0 or the Shell prints
+        "C:X failed <code>"; 65535 = garbage d0, NOT a crash).
+      - Stack at entry is valid (push/pop test clean).
+      - Phase color beacons (color reg 0) work but a Guru requester
+        repaints the palette, erasing them.
+
+      ENCODING CONVENTIONS SETTLED (verified vs ROM + docs):
+      - Bcc/BSR word form: displacement relative to extension word
+        (instruction+2). DBcc: same (self-loop = FFFE). Byte forms
+        relative to instruction end (+2).
+      - MOVE field order: size[15-12], dest reg[11-9], dest mode
+        [8-6], src mode[5-3], src reg[2-0].
+      - Key encodings: lea (d16,pc),aN = 41FA..41FD; move.b
+        (a2)+,d2 = 144A; move.l a1,(a0) = 2089; move.w #imm,disp(a0)
+        = 317C+imm+disp; move.w d2,disp(a3) = 3742+disp; clr.l
+        disp(a0) = 42A8+disp; movea.l $4.w,a6 = 2C78 0004.
+      - jsr -LVO(a6): OpenDevice=-444 (4EAE FE44), DoIO=-456
+        (FE38), CloseDevice=-504 (FE08), OpenLibrary=-552 (FE...228).
+        -444 confirmed by 12 call sites in kick13.rom itself.
+      - OpenDevice registers: a0=devName, d0=unit, a1=ioreq,
+        d1=flags (autodoc-confirmed).
+      - IOStdReq V33: io_Command=28, io_Flags/Actual=30,
+        io_Length=32, io_Data=36, io_Offset=40 (48-byte total OK);
+        Message.mn_Length at offset 18 (set to 48 before open).
+
+      REMAINING BUG: the full injector and even an
+      OpenDevice+CloseDevice-only variant crash with a Software
+      Failure requester (which also erases the color beacons, so
+      the crash phase is invisible). Word-branch displacement
+      off-by-two was found and fixed (bne/beq ref=instr+2), but a
+      guru remains. Next steps, in order:
+      a) Boot with use_debugger=yes; the debugger console window
+         shows the crash PC and registers - one look ends the
+         guessing (capture the console with pwshot.ps1).
+      b) Or LED beacon (CIA-A PRA bit 1, $BFD000 - survives guru
+         repaint, visible in WinUAE's Power indicator).
+      c) Suspects: OpenDevice on V33 needing something more in the
+         ioreq (ln_Type?), IND_WRITE io_Length semantics (event
+         count vs bytes), ie_Class rawkey = 0x0A on 1.3.
+
+      INFRASTRUCTURE READY: edboot-inject2.adf (injector in c/Eval,
+      CLI-stays-open startup), make_inject2.py (all encodings
+      verified), pwshot.ps1 (occluded-window capture), ocrbox.ps1
+      (position OCR), adf_patch/adf_extract verified end-to-end.
 
 **Next steps for interactive verification (physical machine):**
 
