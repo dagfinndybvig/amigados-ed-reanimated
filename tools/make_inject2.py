@@ -89,7 +89,7 @@ def main():
     body += bytes.fromhex("2089")                         # 124: ev1.next = ev2
     body += bytes.fromhex("41fc") + w(KEYS_OFF - 128)     # 126: a2 = keys
     assert len(body) == LOOP, (len(body), LOOP)
-    body += bytes.fromhex("144a")                         # 130: loop:
+    body += bytes.fromhex("1442")                         # 130: loop:
     body += bytes.fromhex("0c0200ff")                     # cmpi.b #$ff,d2
     body += bytes.fromhex("6700") + w(DONE - 138)         # 136: beq.w done
     body += bytes.fromhex("41fd") + w(EVENTS - 142)       # 140: a3 = events
