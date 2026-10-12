@@ -1,0 +1,12 @@
+[package]
+name = "ed"
+version = "0.1.0"
+edition = "2021"
+description = "Clean-room reimplementation of the AmigaDOS Ed 1.14 editor, from the behavior spec only"
+license = "MIT"
+
+[dependencies]
+crossterm = "0.28"
+
+[profile.release]
+opt-level = 2
