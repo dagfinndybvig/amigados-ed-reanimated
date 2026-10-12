@@ -7,8 +7,8 @@ Status legend: [x] done · [ ] to do · [~] in progress · [-] optional / deferr
 - [x] Project directory and README.md (overview, goals, methodology)
 - [x] LEGAL.md — full legal argument, per jurisdiction, with hard rules
 - [x] .gitignore excluding copyrighted material (materials/, ref/, af-extract/)
-- [ ] Copy LEGAL.md rules into a short CONTRIBUTING note if the project
-      ever goes public
+- [x] CONTRIBUTING.md — clean-room rules summary + dev gotchas
+      (created 2026-10-12 now that the repo is public)
 
 ## 2. Acquisition and extraction (DONE)
 
@@ -175,6 +175,13 @@ scriptable pattern analysis; full listing at emulator/ed.asm, 6417 lines).
       needs live verification against the original
 - [ ] Differential testing against original in emulator (deferred
       until MVP exists)
+- [ ] SH display: Buffer usage field always reads 000% (size
+      accounting not implemented; documented in MANUAL.md §9)
+- [-] CRLF files: `\r` is kept as an ordinary character (Amiga
+      convention is LF); documented in MANUAL.md §9 — decide whether
+      load should normalize CRLF
+- [x] Known --script limitations documented (Q skips confirmation,
+      EQ never applies; MANUAL.md §6/§9)
 
 ## 10. Open questions
 

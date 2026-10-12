@@ -448,8 +448,12 @@ ed --script SCRIPT FROM
 bytes (optional, keyword or positional, minimum 10,000).
 
 `--script` runs a file of extended-mode commands (one per line)
-against the buffer without the interactive screen, then saves and
-exits. Use this for automated testing:
+against the buffer without the interactive screen. Nothing is saved
+unless a command in the script (usually `X`) saves and exits. Two
+prompts cannot be asked in script mode: `Q` exits immediately even
+with unsaved edits (no confirmation), and `EQ` moves the cursor to
+each match but never applies the exchange — use `E` in scripts. Use
+`--script` for automated testing:
 
 ```
 ed --script test.ed input.txt
@@ -496,3 +500,44 @@ documented in `docs/ed-spec.md`.
 For the complete behavior specification with evidence tags for every
 claim, see `docs/ed-spec.md`. For the reverse-engineering process
 itself, see `README.md`.
+
+---
+
+## 9. Gotchas and quirks
+
+Things that surprise people. Most are inherited from the original Ed
+1.14; a few are consequences of running a 1988 terminal program on a
+modern host.
+
+1. **The TUI needs a real terminal.** Running `ed` with stdin or
+   stdout redirected (a pipe, `ed file < input`, `echo | ed file`)
+   does not work: the terminal layer reads the console device
+   directly and the editor will appear to hang. For non-interactive
+   use, use `--script` (section 6).
+2. **`--script` cannot ask questions.** `Q` exits without the
+   confirmation prompt, and `EQ` never applies its exchanges (see
+   section 6).
+3. **Q asks, X never asks.** `X` always saves and exits; `Q` asks for
+   confirmation first if anything has changed.
+4. **The backup goes to the current directory.** `t/ed-backup` is
+   relative to where you started the editor — not next to the edited
+   file, and not an Amiga `T:` ram-disk volume.
+5. **Word wrap only fires while typing at the end of a line.**
+   Inserting text in the middle of a long line never wraps it.
+6. **The right margin is 77, not 79.** The 1987 manual says 79, but
+   the original binary's SH display says 077.
+7. **The minimum buffer is 10,000 bytes**, not the 40,000 the manual
+   claimed.
+8. **CRLF files keep their carriage returns.** The editor treats
+   `\r` as an ordinary character, so files saved by Windows programs
+   carry a stray `\r` at the end of every line and may render oddly.
+   The original Amiga convention (LF line endings) works best.
+9. **Any edit invalidates block marks**, except `IB` (section 4.6).
+   `DB` then `IB` fails with "No block marked"; `IB` then `DB` works.
+10. **A saved file always ends with a linefeed**, even if the file
+    you loaded did not.
+11. **Buffer usage reads 000%** — the size accounting is not
+    implemented yet; the other SH fields are accurate.
+12. **Messages persist on the status line** until your next command.
+    A stale "search failed" from minutes ago is normal.
+

@@ -97,8 +97,9 @@ s.50B).
 ```
 README.md     this file — project overview and ground rules
 LEGAL.md      the legal argument and hard rules
-BCPL.md       BCPL language reference and all project Gotchas
-MANUAL.md     Neo-Ed user manual — how to use the clone
+CONTRIBUTING.md clean-room rules for contributors + dev gotchas
+BCPL.md       BCPL language reference and the BCPL-specific Gotchas
+MANUAL.md     Neo-Ed user manual — usage, error messages, gotchas (section 9)
 TODO.md       progress tracker — what is done and what is next
 docs/
   ed-spec.md  the behavior specification of Ed 1.14 (main deliverable)
@@ -110,6 +111,7 @@ ed-rs/        the clean-room Rust reimplementation (the clone)
     headless.rs  --script mode for non-interactive testing
     main.rs      CLI entry, FROM/A,SIZE template
 tools/
+  README.md        script index + window-automation gotchas
   adf_extract.py   AmigaDOS OFS (DOS\0) ADF extractor, layout-verified
   inspect_adf.py   raw block inspector for ADF images
   hunk_dump.py     TRIPOS/standard Amiga executable parser + string dump
@@ -184,6 +186,10 @@ ed.exe myfile.txt 50000
 ```
 ed.exe --script commands.ed myfile.txt
 ```
+
+Note: the TUI needs a real terminal — with stdin or stdout piped it
+will hang. Use `--script` for non-interactive runs. MANUAL.md section
+9 collects the full list of gotchas.
 
 **In the editor:**
 
