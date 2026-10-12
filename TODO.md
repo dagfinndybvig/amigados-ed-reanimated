@@ -387,6 +387,13 @@ scriptable pattern analysis; full listing at emulator/ed.asm, 6417 lines).
       key press clears it (message persists until the next command,
       spec 3) and mouse-move events no longer clear messages.
       Verified live: ESC zz ENTER shows the message, RIGHT clears it.
+- [x] GUI bugfix 2 (2026-10-13): scrolling was lost in the native
+      window rewrite (the crossterm Screen::scroll_follow was
+      deleted) - the cursor walked off-screen past row 10 and
+      b.left was never updated. Ported scroll_follow into gui.rs
+      (vertical one line at a time, horizontal ten characters,
+      spec 3) with 4 new unit tests; 25 total. Verified live:
+      DOWN x14 keeps the cursor visible on the last row.
 - [ ] Differential testing against original in emulator (deferred
       until MVP exists)
 - [ ] SH display: Buffer usage field always reads 000% (size

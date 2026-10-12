@@ -6,6 +6,7 @@
 //! lives in `screen.rs`; this module only maps egui input to it and
 //! draws the result.
 
+use crate::buffer::Buffer;
 use crate::cmdline::Editor;
 use crate::screen::{self, Decision, Mode};
 use crossterm::event::{KeyCode, KeyModifiers};
@@ -173,9 +174,13 @@ impl EdApp {
             egui::Color32::BLACK,
         );
 
+        let cols = (rect.width() / cell_w) as usize;
+        // Scroll the view so the cursor stays visible: vertically one
+        // line at a time, horizontally ten characters at a time (spec
+        // section 3).
+        scroll_follow(&mut self.ed.buffer, self.rows, cols);
         let b = &self.ed.buffer;
         let top = b.top;
-        let cols = (rect.width() / cell_w) as usize;
 
         if matches!(self.mode, Mode::ShDisplay) {
             // SH display replaces the screen (spec section 7)
@@ -328,6 +333,22 @@ fn fit_font_size(ctx: &egui::Context, height: f32) -> f32 {
     size
 }
 
+/// Scroll the view so the cursor stays visible: vertically one line
+/// at a time, horizontally ten characters at a time (spec section 3).
+/// Ported from the crossterm TUI's `Screen::scroll_follow`.
+fn scroll_follow(b: &mut Buffer, rows: usize, cols: usize) {
+    if b.cursor.line < b.top {
+        b.top = b.cursor.line;
+    } else if b.cursor.line >= b.top + rows {
+        b.top = b.cursor.line + 1 - rows;
+    }
+    if b.cursor.col < b.left {
+        b.left = b.cursor.col / 10 * 10;
+    } else if b.cursor.col >= b.left + cols {
+        b.left = (b.cursor.col + 1 - cols) / 10 * 10 + 10;
+    }
+}
+
 /// Map an egui key to a crossterm key code. Letter keys are only mapped
 /// when a control/alt modifier is held (e.g. Ctrl-C); plain letters are
 /// delivered through `Event::Text` instead, so they are not mapped here
@@ -406,4 +427,51 @@ fn map_mods(m: egui::Modifiers) -> KeyModifiers {
         km |= KeyModifiers::ALT;
     }
     km
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn buf() -> Buffer {
+        Buffer::from_text(&"x\n".repeat(30))
+    }
+
+    #[test]
+    fn vertical_scroll_puts_cursor_on_last_visible_row() {
+        let mut b = buf();
+        b.cursor.line = 14; // past the 10-row window
+        scroll_follow(&mut b, 10, 80);
+        assert_eq!(b.top, 5);
+        assert_eq!(b.cursor.line - b.top, 9);
+    }
+
+    #[test]
+    fn vertical_scroll_follows_cursor_up() {
+        let mut b = buf();
+        b.top = 5;
+        b.cursor.line = 2;
+        scroll_follow(&mut b, 10, 80);
+        assert_eq!(b.top, 2);
+    }
+
+    #[test]
+    fn no_scroll_when_cursor_inside_window() {
+        let mut b = buf();
+        b.top = 5;
+        b.cursor.line = 7;
+        scroll_follow(&mut b, 10, 80);
+        assert_eq!(b.top, 5);
+    }
+
+    #[test]
+    fn horizontal_scroll_moves_ten_chars_at_a_time() {
+        let mut b = buf();
+        b.cursor.col = 95; // past the 80-col window
+        scroll_follow(&mut b, 10, 80);
+        assert_eq!(b.left, 20); // cursor at screen col 75
+        b.cursor.col = 15; // back left of the window
+        scroll_follow(&mut b, 10, 80);
+        assert_eq!(b.left, 10); // snapped to a 10-char boundary
+    }
 }
