@@ -18,6 +18,10 @@ const TEXT_ROWS: usize = 10;
 /// "Ed 1.14" title bar.
 const TITLE: &str = " ESC for control";
 
+/// Mild blue background for the reverse-video fields (title bar and
+/// status line); text on them stays black.
+const REV_VIDEO_BG: egui::Color32 = egui::Color32::from_rgb(0x6F, 0xA8, 0xDC);
+
 /// Original Ed screen size in pixels (RAW:0/0/639/199).
 const SCREEN_W: f32 = 640.0;
 const SCREEN_H: f32 = 200.0;
@@ -151,11 +155,11 @@ impl EdApp {
         let status_h = cell_h + 4.0;
         let text_top = rect.min.y + title_h;
 
-        // title bar (white on black, like an Amiga window title)
+        // title bar (mild blue on black, like an Amiga window title)
         painter.rect_filled(
             egui::Rect::from_min_size(rect.min, egui::vec2(rect.width(), title_h)),
             0.0,
-            egui::Color32::WHITE,
+            REV_VIDEO_BG,
         );
         painter.text(
             rect.min + egui::vec2(2.0, 2.0),
@@ -223,7 +227,7 @@ impl EdApp {
             egui::pos2(rect.min.x, rect.max.y - status_h),
             egui::vec2(rect.width(), status_h),
         );
-        painter.rect_filled(status_rect, 0.0, egui::Color32::WHITE);
+        painter.rect_filled(status_rect, 0.0, REV_VIDEO_BG);
         painter.text(
             status_rect.min + egui::vec2(2.0, 2.0),
             egui::Align2::LEFT_TOP,
