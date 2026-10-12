@@ -586,6 +586,27 @@ impl Editor {
         }
     }
 
+    /// Forward find starting AT the cursor position (E semantics:
+    /// the manual says "the editor starts searching for the first
+    /// string at the current cursor position").
+    fn find_at_cursor(&mut self, needle: &str) -> bool {
+        let b = &mut self.buffer;
+        for l in b.cursor.line..b.line_count() {
+            let text = &b.lines[l];
+            let from = if l == b.cursor.line {
+                b.cursor.col
+            } else {
+                0
+            };
+            if let Some(pos) = find_in(text, needle, from, self.case_insensitive) {
+                b.cursor.line = l;
+                b.cursor.col = pos;
+                return true;
+            }
+        }
+        false
+    }
+
     /// Forward find: searches from one place past the cursor
     /// (spec 5.1). Cursor lands at the start of the match.
     fn find(&mut self, needle: &str) -> bool {
@@ -647,7 +668,7 @@ impl Editor {
             self.buffer.cursor.col += repl.chars().count();
             return true;
         }
-        if !self.find(needle) {
+        if !self.find_at_cursor(needle) {
             return false;
         }
         self.pending_exchange = Some((needle.to_string(), repl.to_string()));

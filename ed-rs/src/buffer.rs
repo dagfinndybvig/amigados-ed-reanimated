@@ -198,9 +198,13 @@ impl Buffer {
     }
 
     /// Insert a line with the given text after the current line (A /s/).
+    /// The cursor moves to the new line so consecutive A commands
+    /// insert in reading order.
     pub fn insert_after(&mut self, text: &str) {
         let at = self.cursor.line + 1;
         self.lines.insert(at, text.to_string());
+        self.cursor.line = at;
+        self.cursor.col = 0;
         self.invalidate_block();
     }
 
