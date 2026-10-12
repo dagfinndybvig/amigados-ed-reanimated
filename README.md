@@ -90,6 +90,7 @@ s.50B).
 README.md     this file — project overview and ground rules
 LEGAL.md      the legal argument and hard rules
 BCPL.md       BCPL language reference and all project Gotchas
+MANUAL.md     Neo-Ed user manual — how to use the clone
 TODO.md       progress tracker — what is done and what is next
 docs/
   ed-spec.md  the behavior specification of Ed 1.14 (main deliverable)
