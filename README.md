@@ -228,6 +228,14 @@ corrected backup path from the binary analysis).
 
 ## Roadmap
 
+Main quest (the product): the behavior specification and the clean-room
+Rust clone. Side quest (infrastructure, tracked in TODO 6b): gaining
+programmatic control over the emulator - patched boot disks, synthetic
+keyboard input, fully autonomous verification runs. The side quest
+exists because interactive emulator input is impossible over remote
+sessions; it is engineering in service of verification, not a
+deliverable, and the clone stands on its own regardless.
+
 - [x] Legal framework and project setup
 - [x] Binary extraction and triage
 - [x] Behavior spec draft

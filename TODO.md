@@ -81,7 +81,20 @@ runtime.
 - [ ] Trace DOS packet I/O with the emulator debugger (breakpoints on
       file reads/writes during startup and save)
 
-## 6b. Emulator input crisis (2026-10-12 evening — OPEN)
+## 6b. Side quest: programmatic emulator control (2026-10-12 -> OPEN)
+
+**This section is a SIDE QUEST, not a project deliverable.** The main
+quest - behavior spec + clean-room Rust clone - reached its MVP
+independently of everything below. What follows is the campaign to
+gain *programmatic control over the emulator* (patched boot disks,
+synthetic input, autonomous verification), which became worth pursuing
+only because interactive emulator input is impossible over remote
+sessions (RDP and Windows App both break raw-input keyboard and
+relative mouse capture). Its payoff is infrastructure: once it works,
+the remaining spec [VERIFY] items (A-command, M n, groups/RP, U undo,
+IF/WB) and the differential test suite can run unattended, hands-off.
+Treat it as a solved-when-convenient engineering track; the clone and
+the spec are the product.
 
 Interactive verification is currently BLOCKED by an emulator input
 problem on this machine. Everything below was established by experiment:

@@ -233,6 +233,8 @@ compare code patterns qualitatively.
 | 10 | d0 at rts = the CLI's return code (garbage d0 prints "failed 65535") | Several wrong "crash" theories | Always `moveq #0,d0` before rts in custom commands |
 | 11 | Bcc/BSR word-form and DBcc displacements are relative to the extension word (instruction+2), not the instruction end | Two gurus in hand-built programs | Word-branch ref = instr+2; DBcc self-loop = FFFE |
 | 12 | MOVE encoding: source mode in bits [5-3], source register in bits [2-0] | Several bad encodings | Verify hand encodings against ROM bytes + capstone |
+| 13 | `144A` is an illegal instruction (byte MOVE to an address register); `move.b (a2)+,d2` is `1442` | One guru per boot, misattributed to the exec call | The mode-001 destination is register-to-register only for word/long; byte to An is illegal |
+| 14 | Data labels computed inside the code region (self-overwriting program) | Hours of misdiagnosis ("crash inside OpenDevice") | Data must follow code; find patch points programmatically, never hand-offset |
 
 ### 6.1 Single-hunk ATRM programs: proven working (2026-10-13)
 
@@ -242,9 +244,45 @@ fine under the 1.3 Shell, entered at hunk 0 offset 0, returning
 with `rts` (exit code = d0). This corrects the parked gvdump
 conclusion that the 1.x program ABI was unresolved — those runs
 were misled by gotchas 9 and 10 above. The remaining open problem
-(see TODO 6b item 3) is a Software Failure inside an
-OpenDevice-based injector, not the load format or entry
-convention.
+(see TODO 6b item 3) is a hang/crash around OpenDevice("input.device")
+despite every component being statically verified trivial; the live
+hypothesis is a too-small BCPL command stack.
+
+### 6.2 exec.library V33 vector table: extracted from the ROM
+
+The V33 exec jump table is not present as stubs in the ROM image —
+it is built at boot by inline init code from a table of **word
+offsets relative to the table's own address**, FFFF-terminated, at
+**ROM file offset 0x1A7C** (105 entries; stub k gets LVO −6·(k+1)).
+Cross-verified against the code and live behavior:
+
+| Function | LVO | Stub target (ROM addr) |
+|---|---|---|
+| Supervisor | -30 | 0xF808E6 (sets SR supervisor bit, jmp (a5)) |
+| OpenDevice | -444 | 0xF806A2 (FindName on DeviceList, calls device -6) |
+| DoIO | -456 | 0xF80718 |
+| CloseDevice | -504 | 0xF82234 |
+| OpenLibrary | -552 | 0xF81474 (FindName on LibraryList, calls lib -6) |
+
+**Conclusion: the V33 LVO numbering matches the later V36+
+standard** for every function the injector uses — the "1.x LVOs
+differ" hypothesis is dead. OpenLibrary("dos.library") from a
+startup-CLI command runs clean live (2026-10-13).
+
+### 6.3 ROM device vector tables (romtag format)
+
+A device's romtag init passes three tables to MakeLibrary
+(ROM 0xF81528): vectors (a0), struct-init (a1), func-init (a2),
+data size in d0. The vectors table has two forms, auto-detected:
+a **leading FFFF word** switches to word-offset mode where entries
+are offsets relative to the *table's own address* (the marker is
+skipped); otherwise entries are absolute longword targets,
+FFFFFFFF-terminated. input.device's table (ROM 0x25C8E) uses the
+FFFF-marker form; its Open vector (LVO -6) is at file offset
+0x25D16 — four instructions: set io_Unit to device+0x34, clear a
+flag, increment the open count. Close (LVO -12, file 0x24E52) is
+the mirror image. Statically, opening input.device cannot crash or
+hang — which is what makes the live hang (TODO 6b) interesting.
 
 ## 7. Sources
 
