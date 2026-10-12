@@ -1,3 +1,5 @@
+<img width="657" height="412" alt="neoedpng" src="https://github.com/user-attachments/assets/790eaaa3-c0b1-4561-bb48-50e196b5cd17" />
+
 # Reverse Engineering AmigaDOS Ed
 
 A legal reverse-engineering project studying **Ed**, the full-screen text
