@@ -135,7 +135,34 @@ Other findings from the session (valuable, keep):
 - OSS WinUAE configs: atest3.uae (KS 1.3 + sound off + pause
   options) is the known-good boot config; start-ed.bat launches it.
 
-**Next steps for interactive verification:**
+**Windows App update (later same evening):** synthetic input (keys,
+clicks, even the Ctrl+Win+Win reset combo) into the emulation is dead
+under Windows App as well, on both the AF player (launched
+successfully from our end via its UI: AmigaForever.exe → select
+Workbench 1.3 → ENTER) and the OSS build. Host-level UI (player
+dialogs, menus via ALT accelerators) IS drivable. A fully
+autonomous, input-free pipeline is the way forward:
+
+1. [x] Autonomous boot pipeline proven: patched ADF → boot →
+      screenshot/OCR verification → kill → ADF diff/extract
+      (marker "MARKERZZ 775" rendered; ADF write-check showed only
+      our own patched blocks)
+2. [x] Ruled out: AmigaDOS 1.3 has NO `<file` input redirection
+      (2.0+ feature) — `C:ED RAM:a <s/CLI-Startup` never opened Ed
+      (ReadArgs "Bad arguments", swallowed by Failat 100). Test disk
+      edboot-atest.adf kept for reference
+3. [ ] NEXT: InputEvent injector — a tiny hand-assembled m68k program
+      (model: tools/make_gvdump.py, which already builds and boots
+      custom segments) that builds IECLASS_RAWKEY InputEvent chains
+      and writes them to input.device via IND_WRITE. Startup runs it
+      right before Ed; Ed then receives our byte stream as real
+      keystrokes. Needs the rawkey code table (A=0x20 ... Z=0x2C,
+      ENTER=0x44, ESC=0x45, SPACE=0x40, digits, slash, semicolon)
+      and press/release event pairs per key. This unlocks the
+      A-command test AND the whole differential suite with zero
+      interactive input.
+
+**Next steps for interactive verification (physical machine):**
 
 1. Next live session: work from the physical machine (no RDP), boot
    edboot-shell.adf via start-ed.bat (drops to an interactive CLI),
