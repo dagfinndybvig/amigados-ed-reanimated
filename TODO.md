@@ -343,7 +343,7 @@ scriptable pattern analysis; full listing at emulator/ed.asm, 6417 lines).
       tests: E exchange, RP groups, SH readback, X save + backup)
 - [x] TUI interactive testing (2026-10-12): run_loop refactored into a
       testable process_key state machine (no terminal I/O in the logic);
-      14 unit tests cover immediate keys, extended command entry, EQ
+      21 unit tests cover immediate keys, extended command entry, EQ
       confirm Y/N, Q confirm, SH display, CTRL-G repeat, X/Q/Ctrl-C
       exit; live session in a real Windows console (driven via
       sendkeys + screenshot/OCR) verified rendering, typing, SH

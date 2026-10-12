@@ -16,11 +16,6 @@ pub struct Cursor {
     pub col: usize,  // 0-based
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub struct BlockMark {
-    pub line: usize,
-}
-
 #[derive(Clone)]
 pub struct Buffer {
     pub lines: Vec<String>,

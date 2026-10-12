@@ -25,7 +25,10 @@ fn parse_args(args: Vec<String>) -> Result<(String, Option<usize>), String> {
         let upper = a.to_uppercase();
         if upper == "SIZE" {
             if let Some(v) = args.get(i + 1) {
-                size = v.parse::<usize>().ok().or(None);
+                match v.parse::<usize>() {
+                    Ok(n) => size = Some(n),
+                    Err(_) => return Err("Invalid number given for SIZE".to_string()),
+                }
                 i += 2;
                 continue;
             } else {

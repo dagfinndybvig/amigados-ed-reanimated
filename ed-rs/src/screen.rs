@@ -206,7 +206,6 @@ fn handle_immediate(
     ed: &mut Editor,
     code: KeyCode,
     mods: KeyModifiers,
-    cols: usize,
     rows: usize,
 ) -> (Mode, bool, Option<String>) {
     let mut msg = None;
@@ -467,7 +466,6 @@ fn process_key(
     mode: Mode,
     code: KeyCode,
     modifiers: KeyModifiers,
-    cols: usize,
     rows: usize,
     last_command: &mut String,
 ) -> (Mode, Decision, Option<String>) {
@@ -475,7 +473,7 @@ fn process_key(
 
     let mut mode = match mode {
         Mode::Immediate => {
-            let (new_mode, quit, msg) = handle_immediate(ed, code, modifiers, cols, rows);
+            let (new_mode, quit, msg) = handle_immediate(ed, code, modifiers, rows);
             message = msg;
             if quit {
                 return (new_mode, Decision::Quit { save: false }, message);
@@ -597,7 +595,6 @@ pub fn run_loop(ed: &mut Editor) -> CResult<()> {
                 mode,
                 code,
                 modifiers,
-                screen.cols as usize,
                 window_text_rows,
                 &mut last_command,
             );
@@ -629,7 +626,6 @@ fn byte_to_char(s: &str, bi: usize) -> usize {
 mod tests {
     use super::*;
 
-    const COLS: usize = 80;
     const ROWS: usize = 10; // text rows inside the window
 
     fn ed_with(text: &str) -> Editor {
@@ -643,7 +639,7 @@ mod tests {
         modifiers: KeyModifiers,
         last: &mut String,
     ) -> (Mode, Decision, Option<String>) {
-        process_key(ed, mode, code, modifiers, COLS, ROWS, last)
+        process_key(ed, mode, code, modifiers, ROWS, last)
     }
 
     /// Type an extended command line (after ESC) and press RETURN.

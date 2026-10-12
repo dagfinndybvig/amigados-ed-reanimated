@@ -172,8 +172,7 @@ The binary is at `ed-rs/target/release/ed` (`.exe` on Windows).
 
 ```
 ed-rs/target/release/ed myfile.txt          # Linux/macOS
-ed-rs	arget
-elease\ed.exe myfile.txt     # Windows
+ed-rs/target/release/ed.exe myfile.txt     # Windows
 ```
 
 **Optional buffer size** (keyword or positional; minimum 10,000 bytes,

@@ -230,10 +230,6 @@ pub struct Editor {
     pub pending_exchange: Option<(String, String)>,
     /// Message for the UI status line.
     pub last_message: Option<String>,
-    /// True when the status line currently shows the Exchange? prompt.
-    pub last_exchange_prompt: bool,
-    pub quit_pending: bool,
-    pub quit_save_pending: bool,
     pub quiet_create: bool,
 }
 
@@ -255,9 +251,6 @@ impl Editor {
             sh_show: false,
             pending_exchange: None,
             last_message: None,
-            last_exchange_prompt: false,
-            quit_pending: false,
-            quit_save_pending: false,
             quiet_create: false,
         }
     }

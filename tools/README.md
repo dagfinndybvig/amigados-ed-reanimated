@@ -15,6 +15,9 @@ testing) with synthetic input and screenshot/OCR verification.
 | `disasm_ed.py` | Capstone m68k disassembler for the Ed binary (full listing at `emulator/ed.asm`) |
 | `call_census.py` | Call-site census keyed on `(a2)` globvec offsets |
 | `make_gvdump.py` | Hand-assembled globvec memory-dump tool (campaign parked) |
+| `make_inject.py` | Build the CIA-based keyboard injector with phase beacons (input probe) |
+| `make_inject2.py` | Build the input.device IND_WRITE keyboard injector (InputEvents) |
+| `make_odo2.py` | Build the OpenDevice+CloseDevice isolation test (corrected layout) |
 
 ## Window automation (PowerShell)
 
@@ -25,8 +28,16 @@ testing) with synthetic input and screenshot/OCR verification.
 | `sendkeys.ps1` | SendKeys to a process's main window |
 | `sendkeys_fg.ps1` | SendKeys to a window by hwnd, taking foreground robustly and verifying focus before sending |
 | `focuswin.ps1` / `raisewin.ps1` | Foreground/raise a window (AttachThreadInput) |
-| `findwin.ps1`-style enumeration | List windows by process or title |
-| `listwin.ps1`, `resizewin.ps1`, `click.ps1`, `sendkeys.ps1`, `bothbuttons.ps1`, `asciiart.ps1`, `catchmsg.ps1` | Emulator-driving helpers used during the live-verification sessions |
+| `listwin.ps1` | List windows by process or title |
+| `findoverlay.ps1` | Find top-level windows covering a point (hunting invisible overlays) |
+| `guithread.ps1` | Inspect a window's GUI-thread focus/capture/caret state |
+| `nofocusshot.ps1` | Screenshot a window without stealing focus |
+| `pwshot.ps1` | PrintWindow capture (works even when the window is occluded) |
+| `ocrbox.ps1` | OCR with per-word bounding boxes |
+| `postkeys.ps1` | PostMessage WM_KEYDOWN to a window |
+| `resetkeys.ps1` | Send the WinUAE Amiga-reset combo |
+| `install-af.ps1` | Silent install of the Amiga Forever MSI |
+| `resizewin.ps1`, `click.ps1`, `sendkeys.ps1`, `bothbuttons.ps1`, `asciiart.ps1`, `catchmsg.ps1` | Emulator-driving helpers used during the live-verification sessions |
 
 ## Automation gotchas (all of these bit us)
 
