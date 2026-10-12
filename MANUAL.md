@@ -120,7 +120,7 @@ deliberate deviation from the original's ten-row, 200-pixel window):
 
 ```text
 +------------------------------------------+
-| ESC for control                          |  title bar
+| ESC for command                          |  title bar
 | first line of your text                  |
 | ...                                      |
 | twentieth line of your text              |
@@ -128,7 +128,7 @@ deliberate deviation from the original's ten-row, 200-pixel window):
 +------------------------------------------+
 ```
 
-The title bar shows the key hint **"ESC for control"** - pressing ESC
+The title bar shows the key hint **"ESC for command"** - pressing ESC
 switches to extended command mode (section 4).
 
 The bottom row of the window is the **status line**. It shows:

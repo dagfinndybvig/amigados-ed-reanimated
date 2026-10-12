@@ -28,7 +28,7 @@ const SCREEN_H: f32 = (TEXT_ROWS as f32 + 2.0) * ROW_H + 8.0;
 
 /// Title-bar text: a key hint, drawn highlighted like the original's
 /// "Ed 1.14" title bar.
-const TITLE: &str = " ESC for control";
+const TITLE: &str = " ESC for command";
 
 /// Mild blue background for the reverse-video fields (title bar and
 /// status line); text on them stays black.
