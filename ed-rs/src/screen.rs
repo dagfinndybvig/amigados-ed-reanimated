@@ -1010,4 +1010,27 @@ mod tests {
         assert_eq!(ed.buffer.lines[0], "hello world");
         assert_eq!(ed.buffer.lines[1], "");
     }
+
+    /// Verified live against the original (2026-10-13):
+    /// `3 A /xx/` inserts three lines in reading order; UC makes
+    /// F case-insensitive and LC restores the distinction.
+    #[test]
+    fn repeat_count_and_case_sensitivity() {
+        // 3 A /xx/ from the end of LINE2: three lines, reading order
+        let mut ed = ed_with("LINE1\nLINE2");
+        ed.buffer.cursor.line = 1;
+        let mut last = String::new();
+        run_extended(&mut ed, "3 A /xx/", &mut last);
+        assert_eq!(ed.buffer.lines, vec!["LINE1", "LINE2", "xx", "xx", "xx"]);
+
+        // UC then wrong-case search finds it
+        let mut ed2 = ed_with("LINE1\nLINE2");
+        let mut last2 = String::new();
+        run_extended(&mut ed2, "UC; F /line2/", &mut last2);
+        assert_eq!(ed2.buffer.cursor.line, 1);
+
+        // LC restores distinction: same search now fails
+        run_extended(&mut ed2, "LC; F /line2/", &mut last2);
+        assert_eq!(ed2.last_message.as_deref(), Some("search failed"));
+    }
 }

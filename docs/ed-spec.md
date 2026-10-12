@@ -106,9 +106,9 @@ garbled `PBOM/A`, which is `FROM/A`.
   line are separated by `;` **[DOC]**.
 - Strings are delimited by any character that is not a letter, digit, space,
   semicolon, or bracket, e.g. `/text/`, `!text!` **[DOC]**.
-- A number before a command is a repeat count, e.g. `4 E /a/b/` **[DOC]**.
-- Command groups in parentheses may nest: `RP ( P /x/; 3 A/ / )` **[DOC]**.
-- `RP` repeats a command/group until an error occurs **[DOC]**.
+- A number before a command is a repeat count, e.g. `4 E /a/b/` **[DOC, LIVE 2026-10-13: `3 A /xx/` inserts three lines in reading order]**.
+- Command groups in parentheses may nest: `RP ( P /x/; 3 A/ / )` **[DOC, LIVE 2026-10-13]**.
+- `RP` repeats a command/group until an error occurs **[DOC, LIVE 2026-10-13: `RP ( F /b/; A /hit/ )` inserts one hit per match and terminates]**.
 - Any repeated/grouped sequence aborts if you type a character, or on error
   ("Commands abandoned" **[BIN]**).
 - Unknown input: "Unknown command", "Syntax error" **[BIN]**.
@@ -139,11 +139,11 @@ The complete command set is verified from the dispatch code **[BIN, code]**
 | `EX` | Extend: ignore right margin on current line until cursor moves |
 | `I /s/` | Insert line with `s` before current line |
 | `IB` | Insert copy of marked block after current line |
-| `IF /s/` | Insert file named `s` after current line |
+| `IF /s/` | Insert file named `s` after current line; the filename is a delimited string - a bare argument yields "Syntax error" **[LIVE 2026-10-13]** |
 | `J` | Join current line with next line |
 | `LC` | Distinguish upper/lowercase in searches (default) |
-| `UC` | Ignore case distinction in searches |
-| `M n` | Move cursor to line number n (e.g. `M503`) |
+| `UC` | Ignore case distinction in searches **[LIVE 2026-10-13: F /BBB/ finds `bbb`; LC restores distinction]** |
+| `M n` | Move cursor to line number n, 1-based (e.g. `M503`) **[LIVE 2026-10-13: M2 from top lands on line 2]** |
 | `N` | Move to start of next line |
 | `P` | Move to start of previous line |
 | `Q` | Quit without saving; if edits exist prompts "Edits will be lost - type Y to confirm: " |
@@ -154,10 +154,10 @@ The complete command set is verified from the dispatch code **[BIN, code]**
 | `SH` | Show state: file name, tab distance, margins, block marks, buffer usage |
 | `SL n` | Set left margin to column n |
 | `SR n` | Set right margin to column n |
-| `ST n` | Set tab distance to n (default 3) |
+| `ST n` | Set tab distance to n (default 3); SH readback shows it zero-padded (ST 5 -> 005) **[LIVE 2026-10-13]** |
 | `T` | Move to top of file |
 | `U` | Undo changes made to the current line only |
-| `WB /s/` | Write marked block to file named `s` |
+| `WB /s/` | Write marked block to file named `s`; filename is a delimited string - a bare argument yields "Syntax error" **[LIVE 2026-10-13]** |
 | `X` | Exit: write buffer to file, then quit |
 
 Empty strings in `E` are legal: empty search string inserts the second
@@ -283,6 +283,12 @@ semantics pending the debugger pass **[VERIFY]**.
   choosing Cancel leaves the FROM file saved (step 1 already completed) and
   Ed terminates **[LIVE]**.
 - The backup persists until the next exit overwrites it **[DOC]**.
+- Second live confirmation (2026-10-13): starting Ed from a Shell
+  whose current directory was the write-protected Workbench disk,
+  `X` saved RAM:test (the FROM file) and then failed the backup
+  with the write-protected error - FROM saved, backup target is
+  `t/ed-backup` under the cwd, write failure does not undo the save
+  **[LIVE]**.
 - "Writing to file" message during save; "Error - Disk Full" on write
   failure **[BIN]**.
 - `SA` may save to a different filename; `SA` then `Q` equals `X` **[DOC]**.

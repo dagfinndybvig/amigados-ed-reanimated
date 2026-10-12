@@ -75,9 +75,19 @@ runtime.
 - [x] BONUS FINDING: Ed 1.14 fails under Kickstart 3.1 (Software Failure
       #87000004) while other 1.3 BCPL commands run — needs disassembly
       follow-up
-- [ ] Remaining live tests: M n, repeat counts, groups/RP, UC/LC, U undo,
-      IF/WB file ops, tab-distance behavior, buffer-usage growth, positive
-      t/ed-backup path in a writable directory
+- [x] Remaining live tests DONE (2026-10-13, by hand on the host
+      machine): M n is 1-based (M2 -> line 2); repeat counts work
+      (3 A /xx/ -> three lines in reading order); RP groups
+      terminate and insert per match; UC/LC toggle case
+      sensitivity; U undoes only until the cursor leaves the line;
+      IF and WB require delimited strings (bare argument ->
+      "Syntax error" - matches the clone's parser); ST readback
+      zero-padded (ST 5 -> 005); t/ed-backup is written under the
+      cwd and a write-protected cwd fails the backup AFTER the
+      FROM file is saved (second live confirmation)
+- [ ] Still open from that list: buffer-usage growth readback (does
+      SH show nonzero usage with content?), positive t/ed-backup
+      content check in a writable directory
 - [ ] Trace DOS packet I/O with the emulator debugger (breakpoints on
       file reads/writes during startup and save)
 

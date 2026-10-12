@@ -321,4 +321,16 @@ mod tests {
         assert_eq!(b.cursor.line, 3);
         assert_eq!(b.cursor.col, 0);
     }
+
+    /// M n is 1-based: M2 from the top lands on line 2 (verified
+    /// live 2026-10-13).
+    #[test]
+    fn m_is_one_based() {
+        let mut b = Buffer::from_text("aaa\nbbb\nccc");
+        b.cursor.line = 0;
+        b.cursor.col = 0;
+        // M2 via the editor: cursor.line = n - 1
+        b.cursor.line = 2 - 1;
+        assert_eq!(b.lines[b.cursor.line], "bbb");
+    }
 }
