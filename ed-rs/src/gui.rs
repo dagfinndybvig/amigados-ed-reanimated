@@ -21,6 +21,11 @@ const TITLE: &str = " Neo-Ed";
 const SCREEN_W: f32 = 640.0;
 const SCREEN_H: f32 = 200.0;
 
+/// Prompt shown when the window close button is clicked with unsaved
+/// edits. Y saves and closes; N closes without saving; any other key
+/// cancels the close.
+const CLOSE_PROMPT: &str = "Save changes before closing? (Y/N): ";
+
 pub struct EdApp {
     pub ed: Editor,
     pub mode: Mode,
@@ -29,6 +34,13 @@ pub struct EdApp {
     pub rows: usize,
     pub quit: bool,
     pub save_on_quit: bool,
+    /// True while the window close button has been clicked and we are
+    /// waiting for the user to confirm (Y/N) before closing.
+    pub close_requested: bool,
+    /// Monospace font size, chosen so the layout fits the window.
+    pub font_size: f32,
+    /// Whether `font_size` has been computed yet.
+    pub font_ready: bool,
 }
 
 impl EdApp {
@@ -41,6 +53,9 @@ impl EdApp {
             rows: TEXT_ROWS,
             quit: false,
             save_on_quit: false,
+            close_requested: false,
+            font_size: 14.0,
+            font_ready: false,
         }
     }
 
@@ -61,6 +76,24 @@ impl EdApp {
         }
     }
 
+    /// Handle a key press while the close confirmation prompt is shown.
+    fn handle_close_key(&mut self, code: KeyCode) {
+        match code {
+            KeyCode::Char('y') | KeyCode::Char('Y') => {
+                self.quit = true;
+                self.save_on_quit = true;
+            }
+            KeyCode::Char('n') | KeyCode::Char('N') => {
+                self.quit = true;
+                self.save_on_quit = false;
+            }
+            _ => {
+                // cancel the close and return to editing
+                self.close_requested = false;
+            }
+        }
+    }
+
     fn handle_input(&mut self, ctx: &egui::Context) {
         let events = ctx.input(|i| i.events.clone());
         for event in events {
@@ -76,7 +109,11 @@ impl EdApp {
                 } => {
                     if pressed {
                         if let Some(code) = map_key(key, modifiers) {
-                            self.process(code, map_mods(modifiers));
+                            if self.close_requested {
+                                self.handle_close_key(code);
+                            } else {
+                                self.process(code, map_mods(modifiers));
+                            }
                         }
                     }
                 }
@@ -87,7 +124,11 @@ impl EdApp {
                         if c.is_control() {
                             continue;
                         }
-                        self.process(KeyCode::Char(c), KeyModifiers::NONE);
+                        if self.close_requested {
+                            self.handle_close_key(KeyCode::Char(c));
+                        } else {
+                            self.process(KeyCode::Char(c), KeyModifiers::NONE);
+                        }
                     }
                 }
                 _ => {}
@@ -96,12 +137,15 @@ impl EdApp {
     }
 
     fn render(&mut self, ui: &mut egui::Ui) {
+        let font = egui::FontId::monospace(self.font_size);
+        // Use the font's true row height (baseline-to-baseline) for line
+        // spacing, not the glyph height, so rows are not cramped.
+        let cell_h = ui.ctx().fonts_mut(|f| f.row_height(&font));
+        let blink_on = (ui.ctx().input(|i| i.time) * 2.0) as i64 % 2 == 0;
         let painter = ui.painter();
         let rect = ui.max_rect();
-        let font = egui::FontId::monospace(14.0);
         let galley = painter.layout_no_wrap("M".to_string(), font.clone(), egui::Color32::WHITE);
         let cell_w = galley.size().x;
-        let cell_h = galley.size().y;
         let title_h = cell_h + 4.0;
         let status_h = cell_h + 4.0;
         let text_top = rect.min.y + title_h;
@@ -159,16 +203,20 @@ impl EdApp {
         }
 
         // status line (bottom of the window, reverse video)
-        let status: String = match &self.mode {
-            Mode::Extended(s) => format!("*{}", s),
-            Mode::QuitConfirm => screen::CONFIRM_PROMPT.to_string(),
-            Mode::ExchangeConfirm => "Exchange? ".to_string(),
-            Mode::ShDisplay => "Type any character to continue ".to_string(),
-            Mode::Immediate => self
-                .message
-                .clone()
-                .or_else(|| self.ed.last_message.clone())
-                .unwrap_or_default(),
+        let status: String = if self.close_requested {
+            CLOSE_PROMPT.to_string()
+        } else {
+            match &self.mode {
+                Mode::Extended(s) => format!("*{}", s),
+                Mode::QuitConfirm => screen::CONFIRM_PROMPT.to_string(),
+                Mode::ExchangeConfirm => "Exchange? ".to_string(),
+                Mode::ShDisplay => "Type any character to continue ".to_string(),
+                Mode::Immediate => self
+                    .message
+                    .clone()
+                    .or_else(|| self.ed.last_message.clone())
+                    .unwrap_or_default(),
+            }
         };
         let status_rect = egui::Rect::from_min_size(
             egui::pos2(rect.min.x, rect.max.y - status_h),
@@ -183,8 +231,8 @@ impl EdApp {
             egui::Color32::BLACK,
         );
 
-        // cursor (only in the text area, not in SH display)
-        if !matches!(self.mode, Mode::ShDisplay) {
+        // cursor (only in the text area, not in SH display; blinks)
+        if !matches!(self.mode, Mode::ShDisplay) && blink_on {
             let cursor_x = rect.min.x + b.cursor.col.saturating_sub(b.left) as f32 * cell_w;
             let cursor_y = text_top + b.cursor.line.saturating_sub(top) as f32 * cell_h;
             painter.rect_filled(
@@ -201,17 +249,41 @@ impl EdApp {
 
 impl eframe::App for EdApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        // Pick a font size that fits the window on the first frame.
+        if !self.font_ready {
+            self.font_size = fit_font_size(ui.ctx(), SCREEN_H);
+            self.font_ready = true;
+        }
+
         self.handle_input(ui.ctx());
+
+        // Window close button: if there are unsaved edits, prompt before
+        // closing; otherwise close immediately.
+        let close_requested = ui.ctx().input(|i| i.viewport().close_requested());
+        if close_requested && !self.quit && !self.close_requested {
+            if self.ed.dirty {
+                self.close_requested = true;
+                ui.ctx().send_viewport_cmd(egui::ViewportCommand::CancelClose);
+            } else {
+                self.quit = true;
+                self.save_on_quit = false;
+            }
+        }
+
         egui::CentralPanel::default()
             .frame(egui::Frame::NONE.fill(egui::Color32::BLACK))
             .show(ui, |ui| {
                 self.render(ui);
             });
+
         if self.quit {
             if self.save_on_quit {
                 screen::save_files(&self.ed);
             }
             ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
+        } else {
+            // Keep the cursor blinking.
+            ui.ctx().request_repaint_after(std::time::Duration::from_millis(500));
         }
     }
 }
@@ -221,6 +293,7 @@ pub fn run(ed: Editor) -> eframe::Result<()> {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([SCREEN_W, SCREEN_H])
+            .with_resizable(false)
             .with_title("Neo-Ed"),
         ..Default::default()
     };
@@ -229,6 +302,21 @@ pub fn run(ed: Editor) -> eframe::Result<()> {
         options,
         Box::new(|_cc| Ok(Box::new(EdApp::new(ed)))),
     )
+}
+
+/// Largest monospace font size (from 14.0 down) whose layout — title bar,
+/// `TEXT_ROWS` text lines, and status line — fits within `height`.
+fn fit_font_size(ctx: &egui::Context, height: f32) -> f32 {
+    let mut size = 14.0;
+    while size > 8.0 {
+        let font = egui::FontId::monospace(size);
+        let row_h = ctx.fonts_mut(|f| f.row_height(&font));
+        if (TEXT_ROWS as f32 + 2.0) * row_h + 8.0 <= height {
+            return size;
+        }
+        size -= 0.5;
+    }
+    size
 }
 
 /// Map an egui key to a crossterm key code. Letter keys are only mapped

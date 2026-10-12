@@ -8,3 +8,6 @@ emulator.zip
 # Python
 __pycache__/
 *.pyc
+
+# Ed runtime backup (t/ed-backup, written relative to the cwd)
+t/

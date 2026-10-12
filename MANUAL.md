@@ -132,7 +132,7 @@ The bottom row of the window is the **status line**. It shows:
 - Prompts like **"Exchange? "** or **"Edits will be lost - type Y to
   confirm: "**
 
-The window shows 10 lines of text between the title bar and the status line. The title bar and the status line are both drawn highlighted (white on black), like the original's Amiga window furniture, so the top and bottom edges of the window are always clearly visible. The cursor is shown in the text area at your editing position. CTRL-D and CTRL-U scroll the text by one window (10 lines), and CTRL-E jumps between the top and bottom of the window.
+The window shows 10 lines of text between the title bar and the status line. The title bar and the status line are both drawn highlighted (white on black), like the original's Amiga window furniture, so the top and bottom edges of the window are always clearly visible. The cursor blinks in the text area at your editing position. CTRL-D and CTRL-U scroll the text by one window (10 lines), and CTRL-E jumps between the top and bottom of the window.
 
 ### 2.3 Leaving Neo-Ed
 
@@ -141,6 +141,7 @@ The window shows 10 lines of text between the title bar and the status line. The
 | ESC then `X` then RETURN | Save and exit |
 | ESC then `Q` then RETURN | Exit without saving (asks for confirmation if you've made changes) |
 | CTRL-C | Force quit (terminal-level) |
+| Close button | Save and exit (asks to save if you have unsaved edits) |
 
 `X` is the normal way to leave. It writes your text to the file you
 named when you started, then also writes a backup copy to
@@ -155,6 +156,12 @@ Edits will be lost - type Y to confirm:
 ```
 
 Press **Y** to quit, or anything else to continue editing.
+
+Clicking the window's **close button** behaves like `X`: if you have
+unsaved edits it asks **"Save changes before closing? (Y/N): "** —
+press **Y** to save and exit, **N** to exit without saving, or any
+other key to keep editing. If you have no unsaved edits it closes
+immediately.
 
 ---
 
