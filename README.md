@@ -125,6 +125,37 @@ af-extract/   administrative (no-install) extract of the Amiga Forever MSI
 - Runtime slot naming parked (not needed for the MVP; documented in TODO
   section 7 with resume instructions).
 
+## Running the clone
+
+```
+cd ed-rs
+cargo build --release
+```
+
+The binary is at `ed-rs/target/release/ed.exe`. To edit a file:
+
+```
+ed-rs\target\release\ed.exe myfile.txt
+```
+
+Optional buffer size (keyword or positional, floor 10,000):
+
+```
+ed.exe myfile.txt SIZE 50000
+ed.exe myfile.txt 50000
+```
+
+To run a script of Ed commands headlessly (for testing):
+
+```
+ed.exe --script commands.ed myfile.txt
+```
+
+In the editor: type to insert text; **ESC** enters extended command
+mode; **RETURN** executes and returns to typing; **ESC Q** then **Y**
+quits without saving; **ESC X** saves and exits. All 38 extended
+commands from the original are supported.
+
 ## Roadmap
 
 - [x] Legal framework and project setup
