@@ -104,16 +104,21 @@ open-source WinUAE 6.0.3 (downloaded to emulator/winuae-oss/). Not a
 WinUAE-config problem (inactive_pause etc. were set and verified),
 not an Amiga problem (boots fully with blinking cursor).
 
-**Root-cause suspects (unresolved):**
+**ROOT CAUSE FOUND: the machine is accessed via Remote Desktop.**
+RDP is the classic killer of emulator input: WinUAE reads keyboard
+via raw input and mouse in relative capture, both of which break or
+behave erratically under RDP input tunneling. This also explains
+"mouse integration not working well in Amiga Forever". Yesterday
+(Oct 11) everything worked — presumably a locally-attended session.
 
-- A stuck "Windows Input Experience" overlay window (pid 1956)
-  covering the whole 3440x1440 desktop, visible — may be eating raw
-  input. Check after a reboot.
-- Something machine-level changed between Oct 11 (everything worked,
-  AF player + automation) and Oct 12. Reboot is the obvious first
-  fix to try.
+**Fix for the next session:** do interactive verification while at
+the physical machine (or via a non-RDP connection). Optional aids
+if RDP must be used: WinUAE Game ports → "Windows mouse"/mousehack
+(absolute pointer, no capture); test whether the RDP client's
+keyboard reaches the emulation — synthetic SendInput from tool
+processes does NOT (confirmed tonight even with mousehack=yes).
 
-**Other findings from the session (valuable, keep):**
+Other findings from the session (valuable, keep):
 
 - ed-verify.uae's kick.rom is Kickstart 3.1 (header 0x1114, 512KB),
   NOT 1.3 — that config is the "Ed crashes under KS 3.1" experiment;
@@ -132,11 +137,12 @@ not an Amiga problem (boots fully with blinking cursor).
 
 **Next steps for interactive verification:**
 
-1. Reboot the machine; retry the AF player (yesterday's flow). If
-   keyboard works again, run the A-command test immediately.
-2. If still dead, check the Windows Input Experience window state,
-   try a different user session, or test on another machine.
-3. The pending live items (A-command cursor, M n, groups/RP, U undo
+1. Next live session: work from the physical machine (no RDP), boot
+   edboot-shell.adf via start-ed.bat (drops to an interactive CLI),
+   then type `Ed RAM:atest.txt` and run the A-command test:
+   LINE1, RETURN, LINE2, ESC, `A /one/; A /two/`, RETURN — the
+   order of "one"/"two" in the buffer answers the A-cursor question.
+2. The pending live items (A-command cursor, M n, groups/RP, U undo
    live check, IF/WB, differential testing) all depend on this.
 
 ## 7. Disassembly pass (IN PROGRESS)
