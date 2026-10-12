@@ -185,31 +185,45 @@ autonomous, input-free pipeline is the way forward:
         io_Length=32, io_Data=36, io_Offset=40 (48-byte total OK);
         Message.mn_Length at offset 18 (set to 48 before open).
 
-      REMAINING BUG (NARROWED 2026-10-13): an OpenDevice-ONLY
-      program (init ioreq, jsr -444(a6), rts) also hits the
-      Software Failure - the crash is INSIDE the OpenDevice call
-      itself. All other pieces proven (see above). Prime suspect:
-      the V33 exec LVO numbers differ from the V36+ standard
-      values used; the "-444 confirmed by 12 ROM call sites" claim
-      is unreliable (those sites were found in misaligned
-      disassembly and may be data coincidences). The WinUAE
-      debugger is NOT reachable by synthetic input over the remote
-      session (Ctrl+D, Shift+F12, F12 GUI all dead via SendInput;
-      PostMessage reaches neither hotkeys nor the emulation).
-      No in-ROM 4EF9 stub tables or FFFF/FFFFFFFF-terminated
-      vector tables found by scan - exec's jump table is built
-      by inline code in the exec init. Next steps, in order:
-      a) Disassemble the exec init in kick13.rom (starts at the
-         coldstart vector, $FC00D2) to extract the REAL V33 exec
-         vector table; count the entries to find the true
-         OpenDevice/DoIO/CloseDevice LVOs. Bounded, decisive.
-      b) Alternative route: call DOS via the globvec glue instead
-         (the 1.3 Shell pre-fills the command's globvec with the
-         standard DOS glue set; the campaign census documented the
-         slots). Output()/Write() via the glue = a text/file
-         beacon without exec LVOs at all.
-      c) LED beacon (CIA-A PRA bit 1, $BFD000) survives guru
-         repaint for phase tracing once calls progress at all.
+      REMAINING BUG (NARROWED FURTHER 2026-10-13 late session):
+      HEADLINE: the exec V33 LVO numbering is now DEFINITIVELY
+      correct - the vector table was extracted from the ROM (105
+      entries at ROM offset 0x1a7c: word offsets relative to the
+      table, FFFF-terminated, built by the inline init code) and
+      Supervisor(-30), OpenDevice(-444), DoIO(-456), CloseDevice
+      (-504), OpenLibrary(-552) all code-verified as their V36+
+      counterparts. OpenLibrary("dos.library") runs CLEAN from a
+      startup-CLI command (live proof). input.device's Open (-6 at
+      file 0x25d16) and Close (-12 at 0x24e52) vectors are each
+      4-6 trivial instructions (set io_Unit, opencount+-1) - they
+      cannot crash or hang. The FindName helper (0xf81696) is a
+      plain list walk. YET OpenDevice("input.device") from the same
+      context hangs (no requester, no List output = machine stuck)
+      or crashes with task-held.
+
+      LIVE HYPOTHESIS: the BCPL Shell gives commands a tiny stack;
+      OpenDevice's call chain pushes ~24 bytes more than
+      OpenLibrary's (movem d0-d1 + a2 + a6 saves + nested jsr) and
+      overflows it. Fix: switch to a private stack buffer in the
+      command's own segment before the exec calls, restore before
+      rts. Encodings still to verify from ROM context: move.l
+      a7,(a1) (candidates 0x228F/0x224F family - capstone has
+      rendering quirks here; cross-check against ROM code), and
+      the restore path. The v0/stacktest pea+addq passed but only
+      used 4 bytes of stack.
+
+      Also fixed this session: 144A was an illegal encoding
+      (move.b (a2)+,d2 is 0x1442 - field order src mode[5-3],
+      src reg[2-0]); test-build layout overlap bug (IOREQ label
+      inside code region - data must follow code, patch points
+      found programmatically); odo3-style beq.s+4 off-by-2.
+
+      Boot matrix tonight (all on edboot.adf + CLI-open startup):
+      v0/v0pad40/v0pad82/redtest/stacktest = clean; openlibtest
+      (OpenLibrary) = clean with full List output; odo4
+      (OpenDevice+CloseDevice+LED) = hang; testA/onekey/inject2 =
+      task-held requester. Exec LVO map + input.device vector
+      analysis in tools/ notes below.
 
       INFRASTRUCTURE READY: edboot-inject2.adf (injector in c/Eval,
       CLI-stays-open startup), make_inject2.py (all encodings
