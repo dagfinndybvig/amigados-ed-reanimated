@@ -229,6 +229,22 @@ compare code patterns qualitatively.
 | 6 | String scanner word-padding bug | Six missed message strings | `(1 + n) & 1`, not `n & 1` |
 | 7 | Missing SH label "Right margin" | Spec completeness | Same scanner bug as above |
 | 8 | No legal Amiga BCPL compiler available | Blocked idiom comparison | Documented; alternative routes listed |
+| 9 | CLI window closes on EndCLI, hiding all error output | A whole evening's misdiagnosis | Keep the startup CLI open when testing custom commands |
+| 10 | d0 at rts = the CLI's return code (garbage d0 prints "failed 65535") | Several wrong "crash" theories | Always `moveq #0,d0` before rts in custom commands |
+| 11 | Bcc/BSR word-form and DBcc displacements are relative to the extension word (instruction+2), not the instruction end | Two gurus in hand-built programs | Word-branch ref = instr+2; DBcc self-loop = FFFE |
+| 12 | MOVE encoding: source mode in bits [5-3], source register in bits [2-0] | Several bad encodings | Verify hand encodings against ROM bytes + capstone |
+
+### 6.1 Single-hunk ATRM programs: proven working (2026-10-13)
+
+Small hand-assembled programs in the 1.x-era single-hunk format
+(`0x3F3` header, one `0x3E9` code hunk, `0x3F2` end) load and run
+fine under the 1.3 Shell, entered at hunk 0 offset 0, returning
+with `rts` (exit code = d0). This corrects the parked gvdump
+conclusion that the 1.x program ABI was unresolved — those runs
+were misled by gotchas 9 and 10 above. The remaining open problem
+(see TODO 6b item 3) is a Software Failure inside an
+OpenDevice-based injector, not the load format or entry
+convention.
 
 ## 7. Sources
 

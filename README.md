@@ -118,6 +118,9 @@ tools/
   disasm_ed.py     Capstone m68k disassembler for the Ed binary
   call_census.py   runtime call-site census
   make_gvdump.py   hand-assembled memory-dump tool builder
+  make_inject.py   CIA-based keyboard injector builder (input probe)
+  make_inject2.py  input.device IND_WRITE keyboard injector builder
+  adf_patch.py     patch files inside ADF images (inject test programs)
   *.ps1            emulator automation harness (screenshot/OCR/keyboard)
 ref/          research copies of the AmigaDOS manual text (copyrighted:
               local only, never redistribute)
