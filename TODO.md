@@ -110,8 +110,6 @@ scriptable pattern analysis; full listing at emulator/ed.asm, 6417 lines).
       entry code from kick13.rom to settle the ABI, instead of guessing.
 - [ ] Immediate/CTRL-key dispatch (seg8): letters via moveq + globvec
       call 28; tabulate the full key map
-- [ ] Immediate/CTRL-key dispatch (seg8): letters via moveq + globvec
-      call 28; tabulate the full key map
 - [ ] Right-margin default: SH live readback says 077; no 0x4f (79)
       immediate anywhere in the code; locate the init (data table?) to
       close the manual conflict
@@ -161,8 +159,17 @@ scriptable pattern analysis; full listing at emulator/ed.asm, 6417 lines).
       X/Q/SA/IF/WB, t/ed-backup relative to cwd, verified message set
 - [x] Headless --script mode for testing (proven by scripted smoke
       tests: E exchange, RP groups, SH readback, X save + backup)
-- [ ] TUI interactive testing (compiles; needs a live session to
-      verify screen rendering, immediate keys, EQ confirm flow)
+- [x] TUI interactive testing (2026-10-12): run_loop refactored into a
+      testable process_key state machine (no terminal I/O in the logic);
+      14 unit tests cover immediate keys, extended command entry, EQ
+      confirm Y/N, Q confirm, SH display, CTRL-G repeat, X/Q/Ctrl-C
+      exit; live session in a real Windows console (driven via
+      sendkeys + screenshot/OCR) verified rendering, typing, SH
+      display, Q confirm prompt with N/Y, Ctrl-C, and X saving FROM +
+      t/ed-backup
+- [x] Bug fixed by the TUI pass: Q with unsaved edits exited without
+      asking (quit flag and confirm message were both set); now the
+      QuitConfirm prompt is shown first, per spec
 - [ ] Verify A-command cursor behavior: current implementation leaves
       cursor on the current line (consecutive A's insert in LIFO);
       needs live verification against the original

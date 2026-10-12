@@ -144,7 +144,7 @@ emulator/     emulator, ROM, disk images, configs, screenshots
 - **Rust MVP (ed-rs/)**: clean-room command engine with the full 38-command
   set, buffer model, block semantics, SH display, save/backup, verified
   message set, and a headless `--script` mode for testing. Command engine
-  proven by scripted smoke tests; TUI compiles, interactive testing pending.
+  proven by scripted smoke tests; TUI state machine covered by unit tests and verified live in a real console (rendering, typing, EQ/Q confirm flows, X save). Run `cargo test` inside `ed-rs/`.
 - Runtime slot naming parked (not needed for the MVP; documented in TODO
   section 7 with resume instructions).
 
@@ -224,7 +224,7 @@ corrected backup path from the binary analysis).
 - [x] Behavior spec draft
 - [x] Dynamic verification in an emulator (genuine KS 1.3)
 - [x] Disassembly pass: command dispatch verified, calling convention reconstructed
-- [x] Clean-room Rust MVP: command engine + buffer + save/backup (TUI interactive testing pending)
+- [x] Clean-room Rust MVP: command engine + buffer + save/backup (TUI unit-tested and verified live)
 - [ ] Differential testing: Rust clone vs original in emulator
 - [ ] Version comparison (Ed 1.10 / 1.14 / 2.x / 3.1)
 
