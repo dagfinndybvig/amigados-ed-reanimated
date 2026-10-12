@@ -301,3 +301,24 @@ impl Buffer {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Ground truth verified live against the original Ed 1.14 on
+    /// 2026-10-13: after `A`, the cursor moves to the newly inserted
+    /// line at column 0, so consecutive A's insert in reading order
+    /// (A /one/; A /two/ from the end of line 2 -> one then two).
+    #[test]
+    fn consecutive_a_inserts_in_reading_order() {
+        let mut b = Buffer::from_text("LINE1\nLINE2");
+        b.cursor.line = 1;
+        b.cursor.col = 5;
+        b.insert_after("one");
+        b.insert_after("two");
+        assert_eq!(b.lines, vec!["LINE1", "LINE2", "one", "two"]);
+        assert_eq!(b.cursor.line, 3);
+        assert_eq!(b.cursor.col, 0);
+    }
+}

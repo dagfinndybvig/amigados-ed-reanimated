@@ -342,9 +342,12 @@ scriptable pattern analysis; full listing at emulator/ed.asm, 6417 lines).
 - [x] Bug fixed by the TUI pass: Q with unsaved edits exited without
       asking (quit flag and confirm message were both set); now the
       QuitConfirm prompt is shown first, per spec
-- [ ] Verify A-command cursor behavior: current implementation leaves
-      cursor on the current line (consecutive A's insert in LIFO);
-      needs live verification against the original
+- [x] A-command cursor behavior VERIFIED against the original
+      (2026-10-13, by hand on the host machine): the cursor moves to
+      the newly inserted line at column 0; consecutive A's insert in
+      reading order (A /one/; A /two/ from end of line 2 -> one then
+      two, cursor on the "t" of "two"). The clone's insert_after
+      model was already correct; spec tagged [LIVE]
 - [ ] Differential testing against original in emulator (deferred
       until MVP exists)
 - [ ] SH display: Buffer usage field always reads 000% (size

@@ -121,7 +121,7 @@ The complete command set is verified from the dispatch code **[BIN, code]**
 
 | Command | Action |
 |---|---|
-| `A /s/` | Insert line with `s` after current line |
+| `A /s/` | Insert line with `s` after current line; the cursor moves to the new line (column 0), so consecutive `A` commands insert in reading order **[LIVE, verified 2026-10-13: `A /one/; A /two/` from the end of line 2 yields one/two in order, cursor resting on the first character of the last inserted line]** |
 | `B` | Move to bottom of file |
 | `BE` | Set block end mark at cursor |
 | `BS` | Set block start mark at cursor |
