@@ -229,26 +229,31 @@ mechanism, where dos.library resolves each "GL" reference to the actual
 function on first use.
 
 **Call census** **[BIN, code]**: 545 `jsr (a5)` sites across all nine
-segments, using exactly **19 distinct slot offsets**: 0, 12, 16, 20, 24,
-28, 32, 36, 40, 44, 48, 52, 60, 64, 76, 80, 108, 112, 120 — i.e. globvec
-entries 3–30. Heaviest users: slot 32 (78 sites), slot 28 (69), slot 16
-(91), slot 12 (58). Segments specialize: seg4 (startup/CLI) uses 112/120,
-seg7 (file I/O) uses 60/64/76/80, seg8 (keyboard) uses 108/112.
+segments. Note: an earlier reading of the d0 immediates ("19 distinct
+slot offsets") is superseded by the corrected convention above — d0
+holds the first scalar argument, not a function number. The meaningful
+function census must be keyed on the `(a2)` global offsets from which
+the a4 procedure pointers are loaded (to be redone; `tools/call_census.py`
+needs that change). The d0 histogram (0, 12, 16, 20, 24, 28, 32, 36, 40,
+44, 48, 52, 60, 64, 76, 80, 108, 112, 120, plus direct `jsr $10(a5)` /
+`jsr $12(a5)` runtime-helper calls) remains valid data about argument
+patterns.
 
-**Open**: naming each slot requires the Kickstart 1.3 dos.library glue
-table (the GL-index → function order). Route tried and ruled out: the
-WinUAE built-in debugger is not compiled into release builds (`#ifdef
+**Open**: naming the runtime procedures requires the live contents of
+the process/global vectors. Route tried and ruled out: the WinUAE
+built-in debugger is not compiled into release builds (`#ifdef
 DEBUGGER`, cfgfile/main.cpp). Route opened: the licensed raw KS 1.3 ROM
 is now available (`emulator/kick13.rom`, materialized by the installed
 Amiga Forever), enabling full standalone emulation (own WinUAE + patched
 boot disk; Ed 1.14 runs and shows "Creating new file" **[LIVE]**).
-Negative finding **[BIN]**: the byte pair `0x474C` appears nowhere in
-the ROM, so the GL references are not resolved by a simple ROM-side
-magic compare — the resolver must live in RAM-resident dos.library
-overlays, or the 0x474Cxxxx fill values in Ed's seg0 must be re-read
-(as word-pointers, they encode a different mechanism). Either way the
-19-slot census remains Ed's complete runtime API surface
-**[VERIFY for names]**.
+Current route: a hand-assembled dump tool (`tools/make_gvdump.py`,
+1.x ATRM load-file format) injected into the boot disk, writing
+`DosLibrary.dl_GV` to `DF0:gv.dump` for host-side extraction. Negative
+finding **[BIN]**: the byte pair `0x474C` appears nowhere in the ROM, so
+the GL-style references written by Ed's seg0 are not resolved by a
+ROM-side magic compare — the resolver lives elsewhere, or the
+`0x474Cxxxx` values must be re-read under the corrected convention
+**[VERIFY]**.
 
 **Segment roles** **[BIN, code]**: seg0 = globvec initialization; seg1 =
 line-buffer engine (word-pointer-indexed line array accessed via `a0`,
