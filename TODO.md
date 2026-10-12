@@ -185,20 +185,31 @@ autonomous, input-free pipeline is the way forward:
         io_Length=32, io_Data=36, io_Offset=40 (48-byte total OK);
         Message.mn_Length at offset 18 (set to 48 before open).
 
-      REMAINING BUG: the full injector and even an
-      OpenDevice+CloseDevice-only variant crash with a Software
-      Failure requester (which also erases the color beacons, so
-      the crash phase is invisible). Word-branch displacement
-      off-by-two was found and fixed (bne/beq ref=instr+2), but a
-      guru remains. Next steps, in order:
-      a) Boot with use_debugger=yes; the debugger console window
-         shows the crash PC and registers - one look ends the
-         guessing (capture the console with pwshot.ps1).
-      b) Or LED beacon (CIA-A PRA bit 1, $BFD000 - survives guru
-         repaint, visible in WinUAE's Power indicator).
-      c) Suspects: OpenDevice on V33 needing something more in the
-         ioreq (ln_Type?), IND_WRITE io_Length semantics (event
-         count vs bytes), ie_Class rawkey = 0x0A on 1.3.
+      REMAINING BUG (NARROWED 2026-10-13): an OpenDevice-ONLY
+      program (init ioreq, jsr -444(a6), rts) also hits the
+      Software Failure - the crash is INSIDE the OpenDevice call
+      itself. All other pieces proven (see above). Prime suspect:
+      the V33 exec LVO numbers differ from the V36+ standard
+      values used; the "-444 confirmed by 12 ROM call sites" claim
+      is unreliable (those sites were found in misaligned
+      disassembly and may be data coincidences). The WinUAE
+      debugger is NOT reachable by synthetic input over the remote
+      session (Ctrl+D, Shift+F12, F12 GUI all dead via SendInput;
+      PostMessage reaches neither hotkeys nor the emulation).
+      No in-ROM 4EF9 stub tables or FFFF/FFFFFFFF-terminated
+      vector tables found by scan - exec's jump table is built
+      by inline code in the exec init. Next steps, in order:
+      a) Disassemble the exec init in kick13.rom (starts at the
+         coldstart vector, $FC00D2) to extract the REAL V33 exec
+         vector table; count the entries to find the true
+         OpenDevice/DoIO/CloseDevice LVOs. Bounded, decisive.
+      b) Alternative route: call DOS via the globvec glue instead
+         (the 1.3 Shell pre-fills the command's globvec with the
+         standard DOS glue set; the campaign census documented the
+         slots). Output()/Write() via the glue = a text/file
+         beacon without exec LVOs at all.
+      c) LED beacon (CIA-A PRA bit 1, $BFD000) survives guru
+         repaint for phase tracing once calls progress at all.
 
       INFRASTRUCTURE READY: edboot-inject2.adf (injector in c/Eval,
       CLI-stays-open startup), make_inject2.py (all encodings
