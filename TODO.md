@@ -139,11 +139,13 @@ scriptable pattern analysis; full listing at emulator/ed.asm, 6417 lines).
          available inside the leaked AmigaOS tree — OFF-LIMITS
          (LEGAL.md §4). The 1985 Commodore dev kit shipped Macro
          Assembler/ALINK/C, not the BCPL compiler. Treat as unavailable.
-      2. Arnor BCPL Compiler v1.0 (1986, Amiga): runnable disk image on
-         archive.org (BCPL_Compiler_v1.0_1986_Arnor, .dsk 194KB, runs in
-         WinUAE). Commercial product, murky rights status — local private
-         study only, never redistribute; weaker provenance than our
-         Amiga Forever baseline.
+      2. Arnor BCPL Compiler v1.0 (1986): downloaded and inspected — it
+         is an AMSTRAD CPC/PCW product (CPCEMU .dsk image, AMSDOS,
+         40-track), NOT Amiga software. Contains real BCPL library
+         material (MANIFEST, writef/wrch family) useful only as language
+         reference. Cannot produce Amiga binaries; would need a CPC
+         emulator (WinAPE/Caprice) merely to run. Gray provenance —
+         local study only.
       3. Martin Richards' BCPL (cl.cam.ac.uk/~mr10, free, source
          available; includes Cintpos, TRIPOS's descendant): clean
          provenance, but targets Cintcode on modern hosts — producing
