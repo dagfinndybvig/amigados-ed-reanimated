@@ -14,8 +14,9 @@ use eframe::egui;
 /// Text lines visible inside the window (between title and status).
 const TEXT_ROWS: usize = 10;
 
-/// Window title, like the original's "Ed 1.14" title bar.
-const TITLE: &str = " Neo-Ed";
+/// Title-bar text: a key hint, drawn highlighted like the original's
+/// "Ed 1.14" title bar.
+const TITLE: &str = " ESC for control";
 
 /// Original Ed screen size in pixels (RAW:0/0/639/199).
 const SCREEN_W: f32 = 640.0;

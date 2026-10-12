@@ -117,13 +117,16 @@ Like the original Ed, which opened its own small console window titled "Ed 1.14"
 
 ```text
 +------------------------------------------+
-| Neo-Ed                                   |  title bar
+| ESC for control                          |  title bar
 | first line of your text                  |
 | ...                                      |
 | tenth line of your text                  |
 | status line                              |
 +------------------------------------------+
 ```
+
+The title bar shows the key hint **"ESC for control"** - pressing ESC
+switches to extended command mode (section 4).
 
 The bottom row of the window is the **status line**. It shows:
 
