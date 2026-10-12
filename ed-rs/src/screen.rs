@@ -1,5 +1,9 @@
 //! Full-screen terminal UI for the Ed reimplementation (crossterm).
 //!
+//! Renders a fixed-size window like the original Ed's own console
+//! window ("Ed 1.14"): a title bar, 10 text lines, and a status line
+//! at the bottom of the window.
+//!
 //! Faithful to the behavior spec (docs/ed-spec.md):
 //! - bottom line is the status/message line; messages persist until the
 //!   next command
@@ -15,13 +19,23 @@ use crossterm::{
     cursor::{Hide, MoveTo, Show},
     event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers},
     execute, queue,
-    style::{Print, ResetColor, SetForegroundColor},
+    style::{Print, ResetColor, SetBackgroundColor, SetForegroundColor},
     terminal::{self, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use std::io::{self, Result as CResult, Stdout, Write};
 
 /// One extra row for the status line.
 const STATUS_ROW: u16 = 1;
+
+/// Window title, like the original's "Ed 1.14" title bar.
+const TITLE: &str = " Neo-Ed";
+
+/// Text lines visible inside the window. The original Ed opened a
+/// 640x200 window (~12 text lines at the 8x16 font); we use 10.
+const TEXT_ROWS: u16 = 10;
+
+/// Full window height: title bar + text rows + status line.
+const WINDOW_ROWS: u16 = TEXT_ROWS + STATUS_ROW + 1;
 
 /// Prompt shown when quitting would discard unsaved edits (spec 5.4).
 const CONFIRM_PROMPT: &str = "Edits will be lost - type Y to confirm: ";
@@ -69,6 +83,17 @@ impl Screen {
         }
     }
 
+    /// Total window height (title + text + status), clamped to the
+    /// terminal size on very small terminals.
+    pub fn window_rows(&self) -> u16 {
+        self.rows.min(WINDOW_ROWS)
+    }
+
+    /// Text rows visible inside the window (between title and status).
+    pub fn text_rows(&self) -> usize {
+        self.window_rows().saturating_sub(STATUS_ROW + 1) as usize
+    }
+
     pub fn render(
         &mut self,
         ed: &Editor,
@@ -77,8 +102,19 @@ impl Screen {
     ) -> io::Result<()> {
         queue!(self.stdout, Clear(ClearType::All))?;
         let b = &ed.buffer;
-        let text_rows = (self.rows - STATUS_ROW) as usize;
+        let text_rows = self.text_rows();
+        let status_row = self.window_rows() - STATUS_ROW;
         let top = b.top;
+
+        // title bar (row 0): white on black, like an Amiga window title
+        queue!(
+            self.stdout,
+            MoveTo(0, 0),
+            SetBackgroundColor(crossterm::style::Color::White),
+            SetForegroundColor(crossterm::style::Color::Black),
+            Print(format!("{:<width$}", TITLE, width = self.cols as usize)),
+            ResetColor,
+        )?;
 
         // draw visible lines
         for (row, i) in (top..b.line_count()).enumerate() {
@@ -88,7 +124,7 @@ impl Screen {
             let line = &b.lines[i];
             let chars: Vec<char> = line.chars().collect();
             let visible: String = chars.iter().skip(b.left).take(self.cols as usize).collect();
-            queue!(self.stdout, MoveTo(0, row as u16), Print(&visible))?;
+            queue!(self.stdout, MoveTo(0, row as u16 + 1), Print(&visible))?;
         }
 
         // status line (bottom)
@@ -106,7 +142,7 @@ impl Screen {
         // status line (bottom, padded to the full width)
         queue!(
             self.stdout,
-            MoveTo(0, self.rows - STATUS_ROW),
+            MoveTo(0, status_row),
             SetForegroundColor(crossterm::style::Color::White),
             Print(format!("{:<width$}", status, width = self.cols as usize)),
             ResetColor,
@@ -117,14 +153,14 @@ impl Screen {
             let sh = ed.sh_text();
             queue!(self.stdout, Clear(ClearType::All))?;
             for (row, line) in sh.lines().enumerate() {
-                if (row as u16) >= self.rows - STATUS_ROW {
+                if row >= text_rows {
                     break;
                 }
-                queue!(self.stdout, MoveTo(0, row as u16), Print(line))?;
+                queue!(self.stdout, MoveTo(0, row as u16 + 1), Print(line))?;
             }
             queue!(
                 self.stdout,
-                MoveTo(0, self.rows - STATUS_ROW),
+                MoveTo(0, status_row),
                 Print("Type any character to continue "),
             )?;
             queue!(self.stdout, MoveTo(0, 0))?;
@@ -133,14 +169,14 @@ impl Screen {
         }
 
         // cursor position
-        let screen_row = b.cursor.line.saturating_sub(top) as u16;
+        let screen_row = b.cursor.line.saturating_sub(top) as u16 + 1;
         let screen_col = b.cursor.col.saturating_sub(b.left) as u16;
         queue!(self.stdout, MoveTo(screen_col, screen_row))?;
         self.stdout.flush()
     }
 
     pub fn scroll_follow(&mut self, b: &mut Buffer) {
-        let text_rows = (self.rows - STATUS_ROW) as usize;
+        let text_rows = self.text_rows();
         if b.cursor.line < b.top {
             b.top = b.cursor.line;
         } else if b.cursor.line >= b.top + text_rows {
@@ -185,7 +221,7 @@ fn handle_immediate(
                     ed.dirty = true;
                 }
                 'd' => {
-                    ed.buffer.cursor.line = ed.buffer.cursor.line.saturating_sub(12);
+                    ed.buffer.cursor.line = ed.buffer.cursor.line.saturating_sub(rows);
                     ed.buffer.cursor.col = 0;
                     ed.buffer.follow_cursor_line();
                 }
@@ -193,7 +229,7 @@ fn handle_immediate(
                     let b = &mut ed.buffer;
                     if b.cursor.line == b.top {
                         // already at top of screen → move to bottom
-                        let last = (b.top + rows.saturating_sub(2)).min(b.line_count() - 1);
+                        let last = (b.top + rows.saturating_sub(1)).min(b.line_count() - 1);
                         b.cursor.line = last;
                     } else {
                         b.cursor.line = b.top;
@@ -283,7 +319,7 @@ fn handle_immediate(
                 }
                 'u' => {
                     ed.buffer.cursor.line =
-                        (ed.buffer.cursor.line + 12).min(ed.buffer.line_count() - 1);
+                        (ed.buffer.cursor.line + rows).min(ed.buffer.line_count() - 1);
                     ed.buffer.cursor.col = 0;
                     ed.buffer.follow_cursor_line();
                 }
@@ -545,13 +581,14 @@ pub fn run_loop(ed: &mut Editor) -> CResult<()> {
             if kind == KeyEventKind::Release {
                 continue;
             }
+            let window_text_rows = screen.text_rows();
             let (new_mode, decision, msg) = process_key(
                 ed,
                 mode,
                 code,
                 modifiers,
                 screen.cols as usize,
-                screen.rows as usize,
+                window_text_rows,
                 &mut last_command,
             );
             mode = new_mode;
@@ -583,7 +620,7 @@ mod tests {
     use super::*;
 
     const COLS: usize = 80;
-    const ROWS: usize = 24;
+    const ROWS: usize = 10; // text rows inside the window
 
     fn ed_with(text: &str) -> Editor {
         Editor::new("test.txt", Some(text.to_string()))

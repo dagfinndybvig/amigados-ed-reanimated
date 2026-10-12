@@ -111,16 +111,28 @@ If the file contains binary data (null bytes), you'll see **"File
 contains binary"** and the editor won't start. If it's larger than your
 buffer, you'll see **"File too big"**.
 
-### 2.2 The screen
+### 2.2 The screen (the window)
 
-The last line of the screen is the **status line**. It shows:
+Like the original Ed, which opened its own small console window titled "Ed 1.14", Neo-Ed draws a fixed-size window inside your terminal:
+
+```text
++------------------------------------------+
+| Neo-Ed                                   |  title bar
+| first line of your text                  |
+| ...                                      |
+| tenth line of your text                  |
+| status line                              |
++------------------------------------------+
+```
+
+The bottom row of the window is the **status line**. It shows:
 
 - Error messages (which stay until your next command)
 - The command line when you press ESC
 - Prompts like **"Exchange? "** or **"Edits will be lost - type Y to
   confirm: "**
 
-Everything above the status line is your text.
+The window shows 10 lines of text between the title bar and the status line. CTRL-D and CTRL-U scroll the text by one window (10 lines), and CTRL-E jumps between the top and bottom of the window. Anything outside the window is left blank, like a real Amiga screen around a window. On a terminal smaller than 12 rows, the window shrinks to fit.
 
 ### 2.3 Leaving Neo-Ed
 
@@ -207,8 +219,8 @@ deleted"**.
 
 | Key | Scrolls |
 |---|---|
-| CTRL-D | 12 lines toward the beginning |
-| CTRL-U | 12 lines toward the end |
+| CTRL-D | One window (10 lines) toward the beginning |
+| CTRL-U | One window (10 lines) toward the end |
 | CTRL-V | Redraw the entire screen |
 
 ### 3.6 Changing case

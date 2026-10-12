@@ -358,6 +358,13 @@ scriptable pattern analysis; full listing at emulator/ed.asm, 6417 lines).
       reading order (A /one/; A /two/ from end of line 2 -> one then
       two, cursor on the "t" of "two"). The clone's insert_after
       model was already correct; spec tagged [LIVE]
+- [x] Fixed-window TUI (2026-10-13, from live user testing): Neo-Ed
+      renders a 12-row window inside the terminal, like the original
+      Ed's own 640x200 console window - title bar " Neo-Ed"
+      (white-on-black, like the "Ed 1.14" title), 10 text lines,
+      status line at the window bottom; CTRL-D/U now scroll one
+      window (10 lines), CTRL-E bottom-of-window uses window rows;
+      MANUAL 2.2 and 3.5 updated; 21 tests pass
 - [ ] Differential testing against original in emulator (deferred
       until MVP exists)
 - [ ] SH display: Buffer usage field always reads 000% (size
