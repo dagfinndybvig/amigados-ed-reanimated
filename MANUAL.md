@@ -132,7 +132,7 @@ The bottom row of the window is the **status line**. It shows:
 - Prompts like **"Exchange? "** or **"Edits will be lost - type Y to
   confirm: "**
 
-The window shows 10 lines of text between the title bar and the status line. CTRL-D and CTRL-U scroll the text by one window (10 lines), and CTRL-E jumps between the top and bottom of the window. Anything outside the window is left blank, like a real Amiga screen around a window. On a terminal smaller than 12 rows, the window shrinks to fit.
+The window shows 10 lines of text between the title bar and the status line. The title bar and the status line are both drawn highlighted (white on black), like the original's Amiga window furniture, so the top and bottom edges of the window are always clearly visible; everything outside the window stays blank. The cursor blinks in the text area at your editing position. CTRL-D and CTRL-U scroll the text by one window (10 lines), and CTRL-E jumps between the top and bottom of the window. On a terminal smaller than 12 rows, the window shrinks to fit.
 
 ### 2.3 Leaving Neo-Ed
 

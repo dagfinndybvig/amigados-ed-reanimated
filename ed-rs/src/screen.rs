@@ -16,7 +16,7 @@
 use crate::buffer::Buffer;
 use crate::cmdline::{self, Editor};
 use crossterm::{
-    cursor::{Hide, MoveTo, Show},
+    cursor::{MoveTo, Show},
     event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers},
     execute, queue,
     style::{Print, ResetColor, SetBackgroundColor, SetForegroundColor},
@@ -65,7 +65,7 @@ pub struct Screen {
 impl Screen {
     pub fn new() -> CResult<Self> {
         let mut stdout = io::stdout();
-        execute!(stdout, EnterAlternateScreen, Hide)?;
+        execute!(stdout, EnterAlternateScreen)?;
         terminal::enable_raw_mode()?;
         let (cols, rows) = terminal::size()?;
         Ok(Screen { stdout, rows, cols })
@@ -139,11 +139,13 @@ impl Screen {
                 .or_else(|| ed.last_message.clone())
                 .unwrap_or_default(),
         };
-        // status line (bottom, padded to the full width)
+        // status line (bottom of the window, reverse video like the
+        // title bar so the window edge is clearly visible)
         queue!(
             self.stdout,
             MoveTo(0, status_row),
-            SetForegroundColor(crossterm::style::Color::White),
+            SetBackgroundColor(crossterm::style::Color::White),
+            SetForegroundColor(crossterm::style::Color::Black),
             Print(format!("{:<width$}", status, width = self.cols as usize)),
             ResetColor,
         )?;
@@ -161,9 +163,17 @@ impl Screen {
             queue!(
                 self.stdout,
                 MoveTo(0, status_row),
-                Print("Type any character to continue "),
+                SetBackgroundColor(crossterm::style::Color::White),
+                SetForegroundColor(crossterm::style::Color::Black),
+                Print(format!(
+                    "{:<width$}",
+                    "Type any character to continue ",
+                    width = self.cols as usize
+                )),
+                ResetColor,
             )?;
-            queue!(self.stdout, MoveTo(0, 0))?;
+            // rest the visible cursor just after the continue prompt
+            queue!(self.stdout, MoveTo(33, status_row))?;
             self.stdout.flush()?;
             return Ok(());
         }

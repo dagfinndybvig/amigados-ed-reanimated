@@ -365,6 +365,11 @@ scriptable pattern analysis; full listing at emulator/ed.asm, 6417 lines).
       status line at the window bottom; CTRL-D/U now scroll one
       window (10 lines), CTRL-E bottom-of-window uses window rows;
       MANUAL 2.2 and 3.5 updated; 21 tests pass
+- [x] Window pass 2 (2026-10-13, live feedback): cursor was hidden
+      for the whole session (Hide at init, only shown on cleanup) -
+      now visible throughout; status line and the SH continue prompt
+      are reverse video like the title bar, so the bottom edge of
+      the window is clearly visible
 - [ ] Differential testing against original in emulator (deferred
       until MVP exists)
 - [ ] SH display: Buffer usage field always reads 000% (size
