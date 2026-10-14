@@ -226,6 +226,248 @@ def build(variant, keys, settle_outer):
         a.label("sl_loop")
         a.raw("33fc0f0000dff180")
         a.pcrel_b("60", "sl_loop")
+    elif variant == "dump444":
+        # dump bytes as ~10s color phases (palette = 0xF00 | byte, since
+        # the upper d0 byte stays 0xFF after dbra loops):
+        #   after RED: bytes at $4..$7 (the SysBase pointer longword)
+        #   after GREEN: bytes at [SysBase-446 .. -437] (the -444 entry)
+        a.holdbeacon(0x0f00, 3)           # RED 3s: [4] dump starts
+        for i in range(4):
+            a.raw("1038%04x" % (4 + i))   # move.b $4+i,d0 (abs.W)
+            a.pcrel_w("6100", "dhold")
+        a.raw("2c780004")                 # a6 = SysBase
+        a.holdbeacon(0x00f0, 3)           # GREEN 3s: table dump starts
+        for i in range(10):
+            a.raw("102e%04x" % (0x10000 - 446 + i))  # move.b -446+i(a6),d0
+            a.pcrel_w("6100", "dhold")
+        a.label("d444_loop")
+        a.raw("33fc0ff000dff180")         # yellow tight loop = end
+        a.pcrel_b("60", "d444_loop")
+    elif variant == "dumpod":
+        # dump 8 bytes at 0x00C0509C (the runtime OpenDevice target we
+        # measured via dump444) as 8 color phases (~10s each)
+        a.holdbeacon(0x0f00, 3)           # RED 3s: dump starts
+        a.raw("207c00c0509c")             # movea.l #$c0509c,a0
+        for i in range(8):
+            a.raw("1028%04x" % i)         # move.b i(a0),d0
+            a.pcrel_w("6100", "dhold")
+        a.label("dod_loop")
+        a.raw("33fc0ff000dff180")         # yellow tight loop = end
+        a.pcrel_b("60", "dod_loop")
+    elif variant == "oddirect":
+        # bypass the runtime jump table: call the ROM's OpenDevice
+        # implementation directly (ROM 0x6a2, mapped at 0x00F806A2).
+        # First a control probe: OpenLibrary(-552) on dos.library
+        # (proven-working LVO), then the direct ROM OpenDevice call.
+        a.install_traphandler()
+        a.raw("2c780004")                 # a6 = SysBase
+        a.holdbeacon(0x0f00, 3)           # RED 3s: direct call begins
+        a.pcrel_w("41fa", "ioreq")        # a0 = ioreq (41fb is a1!)
+        for off in (0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44):
+            a.raw("42a8%04x" % off)       # clr.l off(a0)
+        a.raw("317c00300012")             # mn_Length = 48
+        a.pcrel_w("41fa", "dev")          # a0 = devname
+        a.raw("7000")                     # d0 = unit 0
+        a.pcrel_w("41fb", "ioreq")        # a1 = ioreq
+        a.marker("C")                      # args set
+        a.raw("7200")                      # d1 = flags 0
+        a.raw("4eb900f806a2")             # jsr ROM OpenDevice directly
+        a.marker("D")                      # OpenDevice returned
+        a.print_d0()
+        a.raw("4a80")                      # tst.l d0
+        a.pcrel_w("6600", "odd_fail")
+        a.holdbeacon(0x0fff, 4)           # WHITE 4s: d0 == 0
+        a.pcrel_w("41fa", "ioreq")        # a0 = ioreq
+        a.raw("4eb900f806f0")             # jsr ROM CloseDevice (0x6f0)
+        a.marker("E")
+        a.holdbeacon(0x0ff0, 3)           # YELLOW 3s: done
+        a.label("odd_loop")
+        a.raw("33fc000f00dff180")         # hold BLUE = end reached
+        a.pcrel_b("60", "odd_loop")
+        a.label("odd_fail")
+        a.marker("H")
+        a.pcrel_w("41fa", "ioreq")        # a0 = ioreq
+        a.raw("1028001f")                 # d0.b = io_Error (ioreq+0x1f)
+        a.pcrel_w("6100", "dhold")        # display it ~10s
+        a.holdbeacon(0x000f, 4)           # BLUE: returned with error
+        a.label("oddf_loop")
+        a.raw("33fc000f00dff180")
+        a.pcrel_b("60", "oddf_loop")
+    elif variant == "odsetup":
+        # bisect: trap handler + entry RED + ioreq setup (leas, clrs,
+        # mn_Length) + GREEN hold + yellow loop. Crash = the ioreq
+        # setup; yellow = setup is clean.
+        a.install_traphandler()
+        a.holdbeacon(0x0f00, 3)           # RED 3s: entry
+        a.pcrel_w("41fa", "ioreq")        # a0 = ioreq (41fb is a1!)
+        for off in (0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44):
+            a.raw("42a8%04x" % off)       # clr.l off(a0)
+        a.raw("317c00300012")             # mn_Length = 48
+        a.pcrel_w("41fa", "dev")          # a0 = devname
+        a.raw("7000")                     # d0 = 0
+        a.pcrel_w("41fb", "ioreq")        # a1 = ioreq
+        a.raw("7200")                     # d1 = 0
+        a.holdbeacon(0x00f0, 3)           # GREEN 3s: setup done
+        a.label("ods_loop")
+        a.raw("33fc0ff000dff180")         # yellow tight loop
+        a.pcrel_b("60", "ods_loop")
+    elif variant == "odclr":
+        # bisect 2: RED + ioreq lea + 12 clr.l + mn_Length + GREEN
+        a.install_traphandler()
+        a.holdbeacon(0x0f00, 3)           # RED 3s: entry
+        a.pcrel_w("41fa", "ioreq")        # a0 = ioreq (41fb is a1!)
+        for off in (0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44):
+            a.raw("42a8%04x" % off)       # clr.l off(a0)
+        a.raw("317c00300012")             # mn_Length = 48
+        a.holdbeacon(0x00f0, 3)           # GREEN 3s: done
+        a.label("odc_loop")
+        a.raw("33fc0ff000dff180")
+        a.pcrel_b("60", "odc_loop")
+    elif variant == "odlea":
+        # bisect 3: RED + the three leas only + GREEN
+        a.install_traphandler()
+        a.holdbeacon(0x0f00, 3)           # RED 3s: entry
+        a.pcrel_w("41fa", "ioreq")        # a0 = ioreq (41fb is a1!)
+        a.pcrel_w("41fa", "dev")          # a0 = devname
+        a.pcrel_w("41fb", "ioreq")        # a1 = ioreq
+        a.holdbeacon(0x00f0, 3)           # GREEN 3s: done
+        a.label("odl_loop")
+        a.raw("33fc0ff000dff180")
+        a.pcrel_b("60", "odl_loop")
+    elif variant == "odbase":
+        # display our segment base (lea 0(pc)) and the ioreq address
+        # as color phases, to compare with fault addresses.
+        a.install_traphandler()
+        a.holdbeacon(0x0f00, 3)           # RED 3s: base display
+        a.raw("41fa0000")                 # lea 0(pc),a0 = segment base
+        a.raw("2008")                     # d0 = a0
+        a.showphases()
+        a.holdbeacon(0x00f0, 3)           # GREEN 3s: ioreq display
+        a.pcrel_w("41fa", "ioreq")        # a0 = ioreq (41fb is a1!)
+        a.raw("2008")                     # d0 = a0
+        a.showphases()
+        a.label("odb_loop")
+        a.raw("33fc0ff000dff180")
+        a.pcrel_b("60", "odb_loop")
+    elif variant == "fulldirect":
+        # THE INJECTOR: direct ROM calls (bypassing the broken runtime
+        # jump table): OpenDevice=0x6a2, CloseDevice=0x6f0, DoIO=0x718
+        # (ROM 0x00F8xxxx mirror), status via io_Error (ioreq+0x1f),
+        # NOT the d0 return (OpenDevice ends with a Permit whose d0 is
+        # garbage).
+        a.install_traphandler()
+        a.raw("2c780004")                 # a6 = SysBase
+        a.holdbeacon(0x0f00, 2)           # RED 2s: entry
+        a.pcrel_w("41fa", "ioreq")        # a0 = ioreq
+        for off in (0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44):
+            a.raw("42a8%04x" % off)       # clr.l off(a0)
+        a.raw("317c00300012")             # mn_Length = 48
+        a.pcrel_w("41fa", "dev")          # a0 = devname
+        a.raw("7000")                     # d0 = unit 0
+        a.pcrel_w("41fb", "ioreq")        # a1 = ioreq
+        a.raw("7200")                     # d1 = flags 0
+        a.raw("4eb900f806a2")             # jsr ROM OpenDevice
+        a.pcrel_w("41fa", "ioreq")        # a0 = ioreq
+        a.raw("1028001f")                 # d0.b = io_Error
+        a.raw("4a00")                     # tst.b d0 (d0's upper bytes
+        a.pcrel_w("6600", "odd_fail")     # hold Permit garbage!)
+        a.holdbeacon(0x0fff, 2)           # WHITE 2s: device open!
+        # settle, then build events and inject keys
+        a.raw("303c%04x" % 0x384)
+        a.label("fd_set")
+        a.raw("323c2000")
+        a.label("fd_s1")
+        a.raw("51c9fffe")
+        a.pcrel_w("51c8", "fd_set")
+        a.pcrel_w("41fb", "events")       # a0 = ev1
+        a.raw("43e80010")                 # a1 = ev2
+        a.raw("2089")                     # ev1.next = ev2
+        a.pcrel_w("41fc", "keys")         # a2 = keys
+        a.label("fd_loop")
+        a.raw("1442")                     # move.b (a2)+,d2
+        a.raw("0c0200ff")                 # cmpi.b #$ff,d2
+        a.pcrel_w("6700", "fd_done")      # beq done
+        a.pcrel_w("41fd", "events")       # a3 = events
+        a.raw("37420006")                 # ev1.ie_Code = d2
+        a.raw("00020080")                 # ori.b #$80,d2 (release)
+        a.raw("37420016")                 # ev2.ie_Code = d2
+        a.pcrel_w("41fa", "ioreq")        # a0 = ioreq
+        a.raw("317c0003001c")             # io_Command = CMD_WRITE (V33 input.device; 0x409 is V36)
+        a.pcrel_w("43fb", "events")       # a1 = events
+        a.raw("21490024")                 # io_Data = events
+        a.raw("317c00020020")             # io_Length = 2
+        # inline DoIO prologue (ROM 0x718-0x72c verbatim): BeginIO with
+        # the QUICK flag set, skipping DoIO's wait loop (which calls
+        # Wait through the broken runtime table)
+        a.raw("2f09")
+        a.raw("137c0001001e")
+        a.raw("2f0e")
+        a.raw("2c690014")
+        a.raw("4eb900fe4cb8")         # jsr ROM input.device BeginIO
+        a.raw("2c5f")
+        a.raw("225f")
+        a.pcrel_w("6100", "fd_keydelay")   # bsr.w keydelay
+        a.pcrel_b("60", "fd_loop")         # bra loop
+        a.label("fd_done")
+        a.pcrel_w("41fa", "ioreq")
+        a.raw("4eb900f806f0")             # jsr ROM CloseDevice
+        a.holdbeacon(0x0ff0, 3)           # YELLOW 3s: done
+        a.label("fd_end")
+        a.raw("33fc000f00dff180")         # hold BLUE = end
+        a.pcrel_b("60", "fd_end")
+        a.label("odd_fail")
+        a.pcrel_w("41fa", "ioreq")
+        a.raw("1028001f")                 # d0.b = io_Error
+        a.pcrel_w("6100", "dhold")        # display ~10s
+        a.holdbeacon(0x000f, 4)           # BLUE
+        a.label("fdf_loop")
+        a.raw("33fc000f00dff180")
+        a.pcrel_b("60", "fdf_loop")
+    elif variant == "oddump":
+        # display io_Device ([ioreq+0x14]) and the BeginIO vector
+        # ([io_Device-30]) after a successful direct-ROM OpenDevice
+        a.install_traphandler()
+        a.raw("2c780004")                 # a6 = SysBase
+        a.holdbeacon(0x0f00, 2)           # RED 2s: entry
+        a.pcrel_w("41fa", "ioreq")        # a0 = ioreq
+        for off in (0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44):
+            a.raw("42a8%04x" % off)
+        a.raw("317c00300012")             # mn_Length = 48
+        a.pcrel_w("41fa", "dev")          # a0 = devname
+        a.raw("7000")
+        a.pcrel_w("41fb", "ioreq")        # a1 = ioreq
+        a.raw("7200")
+        a.raw("4eb900f806a2")             # jsr ROM OpenDevice
+        a.holdbeacon(0x0fff, 2)           # WHITE 2s: open attempted
+        a.pcrel_w("41fa", "ioreq")        # a0 = ioreq
+        a.raw("20280014")                 # d0 = io_Device
+        a.showphases()
+        a.holdbeacon(0x00f0, 2)           # GREEN 2s: vector display
+        a.pcrel_w("41fa", "ioreq")
+        a.raw("20280014")                 # d0 = io_Device
+        a.raw("2040")                     # a0 = io_Device
+        a.raw("2028ffe2")                 # d0 = [io_Device-30] BeginIO
+        a.showphases()
+        a.label("odd_loop")
+        a.raw("33fc000f00dff180")
+        a.pcrel_b("60", "odd_loop")
+    elif variant == "odname":
+        # display the first longword at our devname (expect e.g.
+        # 0x74696d65 "time") and the DeviceList head pointer at
+        # [SysBase+0x15e], as color phases.
+        a.install_traphandler()
+        a.raw("2c780004")                 # a6 = SysBase
+        a.holdbeacon(0x0f00, 3)           # RED 3s: devname display
+        a.pcrel_w("41fa", "dev")          # a0 = devname
+        a.raw("2010")                     # d0 = first 4 chars
+        a.showphases()
+        a.holdbeacon(0x00f0, 3)           # GREEN 3s: list head display
+        a.raw("41ee015e")                 # lea $15e(a6),a0 (DeviceList)
+        a.raw("2010")                     # d0 = lh_Head
+        a.showphases()
+        a.label("odn_loop")
+        a.raw("33fc0ff000dff180")
+        a.pcrel_b("60", "odn_loop")
     elif variant == "vtest":
         # full odotrace preamble, then red tight-loop
         a.marker("A")
@@ -277,7 +519,7 @@ def build(variant, keys, settle_outer):
     else:
         a.install_traphandler()        # vectors 2-5 -> crash PC as color
         a.holdbeacon(0x0f00, 3)         # RED 3s: entry, about to set up ioreq
-        a.pcrel_w("41fb", "ioreq")    # a0 = ioreq
+        a.pcrel_w("41fa", "ioreq")    # a0 = ioreq (41fb is a1!)
         for off in (0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44):
             a.raw("42a8%04x" % off)   # clr.l off(a0)
         a.raw("317c00300012")         # mn_Length = 48
@@ -317,7 +559,7 @@ def build(variant, keys, settle_outer):
         a.raw("37420006")             # ev1.ie_Code = d2
         a.raw("00020080")             # ori.b #$80,d2 (release bit)
         a.raw("37420016")             # ev2.ie_Code = d2
-        a.pcrel_w("41fb", "ioreq")    # a0 = ioreq
+        a.pcrel_w("41fa", "ioreq")    # a0 = ioreq (41fb is a1!)
         a.raw("317c0409001c")         # io_Command = IND_WRITE
         a.pcrel_w("43fb", "events")   # a1 = events
         a.raw("21490024")             # io_Data = events (36)
@@ -328,7 +570,7 @@ def build(variant, keys, settle_outer):
 
     if variant != "stack":
         a.label("done")
-        a.pcrel_w("41fb", "ioreq")    # a0 = ioreq
+        a.pcrel_w("41fa", "ioreq")    # a0 = ioreq (41fb is a1!)
         a.raw("4eaefe08")             # jsr CloseDevice(-504,a6)
         if trace:
             a.marker("F")             # CloseDevice returned
@@ -346,11 +588,15 @@ def build(variant, keys, settle_outer):
         a.raw("2e5f")
         a.raw("7000")
         a.raw("4e75")
+        a.label("fd_keydelay")
+        a.raw("323c1800")             # d1 = 0x1800
+        a.raw("51c9fffe")
+        a.raw("4e75")
         a.label("keydelay")
         a.raw("323c1800")             # d1 = 0x1800
         a.raw("51c9fffe")             # dbra d1,*
         a.raw("4e75")
-        if trace or variant in ("serloop", "vtest"):
+        if trace or variant in ("serloop", "vtest", "oddirect"):
             # serout: send the byte in d2 (clobbers d1). UART direct.
             # Port enable copied from devs/serial.device (0x316):
             # DDR bits 6,7 outputs (RTS/DTR), PRA 5-7 asserted.
@@ -367,8 +613,20 @@ def build(variant, keys, settle_outer):
             a.label("sergap")
             a.raw("51c9fffe")              # dbra d1,sergap
             a.raw("4e75")
-        if variant == "peekvec":
+        if variant in ("peekvec", "odbase", "odname", "oddump"):
             a.emit_showphases()
+        if variant in ("dump444", "dumpod", "oddirect", "odsetup", "odclr", "odlea", "odbase", "fulldirect"):
+            # dhold: hold color = d0.w for ~10s
+            a.label("dhold")
+            a.raw("33c000dff180")           # move.w d0,color0
+            a.raw("343c1af4")               # d2 = 6900 outer (~10s)
+            a.label("dholdo")
+            a.raw("33c000dff180")           # rewrite
+            a.raw("323c0400")               # d1 = 1024 inner
+            a.label("dholds")
+            a.raw("51c9fffe")               # dbra d1,inner
+            a.pcrel_w("51ca", "dholdo")     # dbra d2,outer
+            a.raw("4e75")
     else:
         a.raw("33fc0ff000dff180")     # YELLOW: restored (stack variant)
         a.raw("2e5f")                 # restore SP
@@ -388,6 +646,7 @@ def build(variant, keys, settle_outer):
     keys_blob = bytes(keys) + b"\xff"
     data += keys_blob                                    # keys
     data += DEVNAME                                      # dev
+    data += b"\x00" * 36                                # replyport
     data += b"\x00" * STACK_BYTES                       # stack buffer
     while len(data) % 4:
         data += b"\x00"
@@ -397,9 +656,11 @@ def build(variant, keys, settle_outer):
     events = ioreq + 48
     keys = events + 32
     dev = keys + len(keys_blob)
-    stacktop = dev + len(DEVNAME) + STACK_BYTES
+    replyport = dev + len(DEVNAME)
+    stacktop = replyport + 36 + STACK_BYTES
     for name, val in (("ioreq", ioreq), ("events", events),
-                      ("keys", keys), ("dev", dev), ("stacktop", stacktop)):
+                      ("keys", keys), ("dev", dev),
+                      ("replyport", replyport), ("stacktop", stacktop)):
         a.labels[name] = val
     body = a.assemble()          # now with data labels bound
     blob = body + data
