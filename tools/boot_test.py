@@ -23,7 +23,7 @@ import subprocess
 import sys
 import time
 
-REPO = os.path.dirname(os.path.abspath(__file__))
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 EMUDIR = os.path.join(REPO, "emulator")
 SCRATCH = os.path.join(EMUDIR, "scratch")
 WINUAE = os.path.join(EMUDIR, "winuae-oss", "winuae64.exe")
@@ -31,10 +31,12 @@ CAPTURE = os.path.join(REPO, "tools", "capture_winuae.ps1")
 OCRBOX = os.path.join(REPO, "tools", "ocrbox.ps1")
 
 
-def make_config(adf, tag, base):
+def make_config(adf, tag, base, extra=""):
     with open(base, "r") as f:
         cfg = f.read()
     cfg = re.sub(r"(?m)^floppy0=.*$", lambda m: "floppy0=" + os.path.abspath(adf), cfg)
+    if extra:
+        cfg = cfg.rstrip("\r\n") + "\n" + extra + "\n"
     path = os.path.join(SCRATCH, "boot-%s.uae" % tag)
     with open(path, "w") as f:
         f.write(cfg)
@@ -82,6 +84,31 @@ def to_hex(c):
     return "%02x%02x%02x" % c
 
 
+def serial_reader(port, buf):
+    """Connect to WinUAE's serial TCP bridge and collect bytes until
+    closed. WinUAE listens; we connect."""
+    import socket
+    for _ in range(30):
+        try:
+            s = socket.create_connection(("127.0.0.1", port), timeout=2)
+            break
+        except OSError:
+            time.sleep(1)
+    else:
+        return
+    s.settimeout(1)
+    while True:
+        try:
+            data = s.recv(4096)
+            if not data:
+                return
+            buf.extend(data)
+        except socket.timeout:
+            continue
+        except OSError:
+            return
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("adf")
@@ -91,18 +118,28 @@ def main():
     ap.add_argument("--wait-for", default=None)
     ap.add_argument("--keep-all", action="store_true")
     ap.add_argument("--base-config", default=os.path.join(EMUDIR, "atest5.uae"))
+    ap.add_argument("--config-append", default=None,
+                    help="extra .uae config lines (e.g. log_illegal_mem=yes)")
+    ap.add_argument("--serial-port", type=int, default=None,
+                    help="read WinUAE's serial TCP bridge on this port")
     ap.add_argument("--ocr-every", type=int, default=2, help="OCR every Nth poll")
     args = ap.parse_args()
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
     adf = os.path.abspath(args.adf)
-    cfg = make_config(adf, args.tag, args.base_config)
+    cfg = make_config(adf, args.tag, args.base_config, args.config_append or "")
     shots = os.path.join(SCRATCH, "shots")
     os.makedirs(shots, exist_ok=True)
 
     proc = subprocess.Popen([WINUAE, "-f", cfg])
     print("launched pid=%d cfg=%s" % (proc.pid, cfg))
+
+    ser_buf = bytearray()
+    if args.serial_port:
+        import threading
+        threading.Thread(target=serial_reader,
+                         args=(args.serial_port, ser_buf), daemon=True).start()
 
     deadline = time.time() + args.timeout
     i, ocr_words, colors = 0, [], []
@@ -145,6 +182,8 @@ def main():
     print("---")
     print("shots: %d, wait_for hit: %s" % (i, hit))
     print("colors:", " ".join(c for c, _ in colors))
+    if ser_buf:
+        print("serial: %r" % bytes(ser_buf))
     if ocr_words:
         print("final OCR: " + " ".join(ocr_words))
     print("final shot: %s" % last_png)
