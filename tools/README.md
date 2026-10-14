@@ -18,6 +18,8 @@ testing) with synthetic input and screenshot/OCR verification.
 | `make_inject.py` | Build the CIA-based keyboard injector with phase beacons (input probe) |
 | `make_inject2.py` | Build the input.device IND_WRITE keyboard injector (InputEvents) |
 | `make_odo2.py` | Build the OpenDevice+CloseDevice isolation test (corrected layout) |
+| `adf_read.py` | Read a file (or list a directory) out of an ADF image |
+| `boot_test.py` | Autonomous boot-test harness: launch WinUAE with a generated config, poll the emulation window with PrintWindow captures, OCR (2x upscaled) + background-color beacon sampling, kill on match/timeout. No host input — works over RDP |
 
 ## Window automation (PowerShell)
 
@@ -33,6 +35,7 @@ testing) with synthetic input and screenshot/OCR verification.
 | `guithread.ps1` | Inspect a window's GUI-thread focus/capture/caret state |
 | `nofocusshot.ps1` | Screenshot a window without stealing focus |
 | `pwshot.ps1` | PrintWindow capture (works even when the window is occluded) |
+| `capture_winuae.ps1` | PrintWindow capture of the WinUAE emulation window (largest visible window of the process; no focus steal) |
 | `ocrbox.ps1` | OCR with per-word bounding boxes |
 | `postkeys.ps1` | PostMessage WM_KEYDOWN to a window |
 | `resetkeys.ps1` | Send the WinUAE Amiga-reset combo |
