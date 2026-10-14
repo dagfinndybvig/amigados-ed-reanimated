@@ -202,13 +202,70 @@ autonomous, input-free pipeline is the way forward:
       - jsr -LVO(a6): OpenDevice=-444 (4EAE FE44), DoIO=-456
         (FE38), CloseDevice=-504 (FE08), OpenLibrary=-552 (FE...228).
         -444 confirmed by 12 call sites in kick13.rom itself.
+        V33 corrections (2026-10-14 session, verified vs the ROM
+        vector table at 0x1a7c): CloseDevice = -450 NOT -504;
+        DoIO = -456 ok; OpenLibrary = -552 ok. ROM linked at
+        0x00FC0000 (entry jmp $00FC00D2); ROM functions (file
+        offset): OpenDevice 0x6a2, CloseDevice 0x6f0, DoIO 0x718,
+        MakeLibrary 0x1528, Disable 0x1428, Permit 0x1436,
+        AddDevice 0x690, FindName 0x1696, input.device BeginIO
+        0x24cb8, its command table 0x25c9e (17 cmds) + support
+        table 0x25ce2, its init 0x25ad0 (vecTable 0x25c8e,
+        dataTable 0x25bf4), romtag 0x24c26.
       - OpenDevice registers: a0=devName, d0=unit, a1=ioreq,
         d1=flags (autodoc-confirmed).
       - IOStdReq V33: io_Command=28, io_Flags/Actual=30,
         io_Length=32, io_Data=36, io_Offset=40 (48-byte total OK);
         Message.mn_Length at offset 18 (set to 48 before open).
 
-      REMAINING BUG (NARROWED FURTHER 2026-10-13 late session):
+      SOLVED 2026-10-14: THE ORIGINAL REMAINING BUG WAS AN
+      ENCODING TYPO, not a stack overflow. 'lea d16(pc),a0' is 41FA;
+      41FB is a1. The ioreq-setup leas were commented 'a0 = ioreq'
+      but emitted 41FB, so the 12 clr.l off(a0) writes ran against
+      stale a0 (the entry's stacktop pointer), zeroing 48 bytes PAST
+      the segment. With 41FA the setup is clean (odclr bisect boot
+      passes, machine stable). The private stack is fine.
+
+      2026-10-14 state of the injector (make_inject3.py, diagnostic
+      ladder odsetup/odclr/odlea/odbase/odname/oddump/peekvec/
+      dump444/dumpod/oddisable/fulldirect):
+      - Direct ROM calls WORK from the command context where the
+        runtime SysBase trampolines crash: jsr -120(a6) (Disable)
+        crashes reproducibly from our context (oddisable probe),
+        which poisons every library-vector call including BeginIO's
+        reply path (Disable + PutMsg + Permit via the table).
+        ROM OpenDevice at 0x00FC06A2 opens timer.device cleanly
+        (io_Error = 0; test via io_Error at ioreq+0x1f, NOT d0 -
+        the ROM ends with a Permit whose d0 is garbage).
+      - Under the LEAN startup input.device is NOT in the device
+        list (its own init calls MakeLibrary/OpenDevice through
+        the poisoned table); under the FULL AF startup it IS
+        (WHITE open-beacon seen in full1-full6 boots).
+      - V33 input.device command map: CMD_WRITE(3) dispatches to
+        the invalid stub (io_Error=-3); the real event injection
+        goes through the ASYNC path (cmds 9/10/11 queue via
+        0x24d10, handlers 0x5d02) - all of which reply through
+        the poisoned table calls.
+      - WinUAE serial TCP bridge (serial_port=TCP://0.0.0.0:1234)
+        never opened a listener in any config tried (open
+        question); the color-phase beacon channel (custom reg 0
+        as a 12-bit display) is the working readback instead.
+        Single custom-register writes are repainted by the
+        display within a frame - only rewrite spin loops are
+        visible to screenshots. ROM/serial port-enable bytes
+        copied verbatim from devs/serial.device 0x316.
+      - NEXT (two attack paths): (1) bypass the reply entirely:
+        inline Forbid/Permit (the ROM's own idiom: addq.b #1,
+        $127(a6) at ROM 0x6b4 / subq) + enqueue InputEvents
+        directly into input.device's event list (the node's
+        internal queue set up by the lib-init at 0x25aea, list at
+        node+0x48 per the NEWLIST idiom at 0x25af6); (2) find out
+        WHY the trampolines crash in the CLI-command context (dump
+        [-120..-115] and its target like dump444 did for -444) -
+        note OpenLibrary(-552) reportedly worked in the old
+        session, so some trampolines may be intact.
+
+      PREVIOUS NOTE (2026-10-13, superseded):
       HEADLINE: the exec V33 LVO numbering is now DEFINITIVELY
       correct - the vector table was extracted from the ROM (105
       entries at ROM offset 0x1a7c: word offsets relative to the
