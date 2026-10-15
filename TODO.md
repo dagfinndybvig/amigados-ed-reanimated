@@ -345,12 +345,25 @@ autonomous, input-free pipeline is the way forward:
     docs/winuae-inject.md. Binary: bin/winuae64.exe.
   - VERIFIED: boots KS1.3 identically to the stock OSS binary
     (boot_test.py --exe, same color timeline + OCR, 50 FPS).
-  - NEXT: hook the host-keyboard -> Amiga keycode path (cia.c/
-    keybuf.c) + tiny TCP/drop-file listener (~100-300 lines C);
-    then boot_test.py gains an inject step and the [VERIFY] items
-    in docs/ed-spec.md become mechanically testable. The in-emulator
-    injector (make_inject3.py lvoprobe) is shelved - keep the LVO
-    findings above, they stand on their own.
+  - DONE (2026-10-15): injection hook implemented. No new keycode
+    plumbing needed - upstream keybuf.cpp already has
+    keybuf_inject() (clipboard paste path). Added
+    od-win32/inject_server.cpp: TCP listener 127.0.0.1:7765,
+    one line per connection -> keybuf_inject() + Return, replies
+    OK. Thread starts from WM_CREATE (patch_win32.py); beta
+    disclaimer dialog disabled for headless runs (fixbeta.py);
+    reconfig.py adds inject_server.cpp to the vcxproj.
+  - boot_test.py --inject "SECONDS:TEXT" (repeatable, \n = Enter)
+    sends lines to the server. VERIFIED end-to-end on
+    edboot-injectcli.adf (fulldirect + Echo INJECT-READY + Shell):
+    injected text appears at the 1.3 CLI prompt (OCR + live).
+  - Known quirk: PrintWindow shots of the beta build sometimes
+    blended frames / odd mode colors; live observation confirms
+    typing is correct. The in-emulator injector (make_inject3.py
+    lvoprobe) stays shelved - LVO findings above stand alone.
+  - NEXT: use injection to drive the [VERIFY] items in
+    docs/ed-spec.md mechanically (boot edboot disk, inject Ed
+    commands, OCR/serial-verify results).
 
 ## 7. Disassembly pass (IN PROGRESS)
 

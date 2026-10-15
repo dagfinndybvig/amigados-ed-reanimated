@@ -65,10 +65,36 @@ SDK. Output redirected from upstream's hardcoded `d:\amiga\` to `bin/`.
 boots KS1.3 identically to the stock OSS binary (same color timeline, same
 OCR, 50 FPS).
 
-## Next: the injection hook
+## The injection hook (implemented)
 
-Plan: hook the host-keyboard → Amiga keycode path (cia.c / keybuf.c — the
-function that queues a raw Amiga keycode) and add a tiny listener (TCP
-socket or watched drop-file, ~100-300 lines C) that feeds keycodes in.
-Then boot_test.py gains an inject step and the [VERIFY] items in
-docs/ed-spec.md become mechanically testable.
+No new keycode plumbing was needed: upstream `keybuf.cpp` already has
+`keybuf_inject(const uae_char *txt)` — the same entry point the clipboard
+paste-to-keyboard path uses. It filters ASCII through `kbtable`
+(`\n` = Return 0x44, `\t`, letters, digits, punctuation) and queues the
+text; `get_next_key()` drains it as press/release pairs paced by
+`can_inject()` (~6 chars/sec at 50 FPS).
+
+Added `src/od-win32/inject_server.cpp`: a TCP listener on
+`127.0.0.1:7765` (loopback only, one connection at a time). Protocol:
+send one line (bytes up to `\n` or EOF); the line is passed to
+`keybuf_inject()` with a Return appended, the server replies `OK\n` and
+closes. The thread starts from WM_CREATE in win32.cpp, next to
+`clipboard_init`. Two more local patches: `patch_win32.py` (win32.cpp
+hook, CRLF-safe) and `fixbeta.py` (disables the Public Beta Disclaimer
+dialog that otherwise blocks headless startup).
+
+Rebuild chain additions: `python patch_win32.py`, `python fixbeta.py`
+(both idempotent, run after `reconfig.py`; `reconfig.py` also adds
+inject_server.cpp to the vcxproj).
+
+Harness: `python tools/boot_test.py <adf> <tag> --exe
+emulator/winuae-inject/bin/winuae64.exe --inject "25:Echo HELLO\n"`
+— injects `Echo HELLO` + Return 25 seconds after launch (bare text
+defaults to 15s; literal `\n` becomes Enter; repeatable, `SECONDS:TEXT`
+per entry). Verified end-to-end on `emulator/scratch/edboot-injectcli.adf`
+(edboot-fulldirect + `Echo INJECT-READY` + `Shell` appended to its
+startup-sequence): injected text appears at the 1.3 CLI prompt.
+
+Known capture quirk: PrintWindow shots of the beta build sometimes come
+out as blended frames (odd mode colors); OCR of a blended frame can lag
+one screen behind. Live observation confirms typing is correct.

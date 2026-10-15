@@ -109,6 +109,30 @@ def serial_reader(port, buf):
             return
 
 
+def inject_keys(port, text):
+    """Send text to the injection build's TCP key server (od-win32/inject_server.cpp)."""
+    import socket
+    text = text.replace("\\n", "\n")
+    for _ in range(10):
+        try:
+            s = socket.create_connection(("127.0.0.1", port), timeout=2)
+            break
+        except OSError:
+            time.sleep(1)
+    else:
+        print("inject: could not connect to 127.0.0.1:%d" % port)
+        return False
+    s.sendall(text.encode("latin-1", "replace") + b"\n")
+    s.settimeout(5)
+    try:
+        reply = s.recv(64)
+    except OSError:
+        reply = b""
+    s.close()
+    print("inject: sent %r reply=%r" % (text, reply))
+    return True
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("adf")
@@ -126,6 +150,11 @@ def main():
     ap.add_argument("--exe", default=None,
                     help="WinUAE binary to launch (default: emulator/winuae-oss/winuae64.exe; "
                          "use emulator/winuae-inject/bin/winuae64.exe for the injection build)")
+    ap.add_argument("--inject", action="append", default=[],
+                    help="text to inject via the WinUAE TCP key server (injection build only); "
+                         "'SECONDS:TEXT' delays injection SECONDS after launch, bare TEXT "
+                         "defaults to 15s; literal \\n becomes Enter. Repeatable.")
+    ap.add_argument("--inject-port", type=int, default=7765)
     args = ap.parse_args()
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
@@ -137,6 +166,15 @@ def main():
 
     proc = subprocess.Popen([args.exe or WINUAE, "-f", cfg])
     print("launched pid=%d cfg=%s" % (proc.pid, cfg))
+
+    inject_schedule = []
+    for spec in args.inject:
+        m = re.match(r"^(\d+):(.*)$", spec, re.S)
+        if m:
+            inject_schedule.append([time.time() + int(m.group(1)), m.group(2)])
+        else:
+            inject_schedule.append([time.time() + 15, spec])
+    inject_schedule.sort(key=lambda e: e[0])
 
     ser_buf = bytearray()
     if args.serial_port:
@@ -151,6 +189,8 @@ def main():
     try:
         while time.time() < deadline:
             time.sleep(args.interval)
+            while inject_schedule and inject_schedule[0][0] <= time.time():
+                inject_keys(args.inject_port, inject_schedule.pop(0)[1])
             png = os.path.join(shots, "%s-%02d.png" % (args.tag, i))
             if not capture(png):
                 print("poll %d: no window yet" % i)
