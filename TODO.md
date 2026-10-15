@@ -365,6 +365,136 @@ autonomous, input-free pipeline is the way forward:
     docs/ed-spec.md mechanically (boot edboot disk, inject Ed
     commands, OCR/serial-verify results).
 
+**UPDATE 2026-10-15 (evening): console.device hook campaign — KS 1.3
+findings, blob/asm drift discovered, hook not yet working.**
+
+Goal: make the patched WinUAE's `-conhook` console.device text channel
+work on KS 1.3 so CLI output can be captured headless (stdout) instead
+of via screenshot/OCR. Upstream WinUAE's consolehook patches
+console.device's BeginIO vector to route CMD_WRITE/CMD_READ to the
+host; its Amiga-side installer only arms on KS 2+ (RTF_AFTERDOS), so
+KS 1.3 needs a custom entry path.
+
+1. Boot failures SOLVED (prerequisite work, earlier today):
+   - The "stuck cycling colours" boots were NOT the insert-floppy
+     screen; the disks booted DOS, printed the CLI banner, then
+     crashed ~42 s in (Exception 3 at c08c3a). Root cause: a bare
+     `C:Eval` in the startup-sequence calling a broken custom c/Eval
+     (1796 vs standard 1972 bytes) on the edboot-fulldirect /
+     edboot-injectcli disk lineage.
+   - FIX: emulator/scratch/edboot-clean.adf, built from the
+     known-good edboot.adf lineage (only 7 blocks differ) with a
+     clean startup-sequence (MakeDir/Assign T:, Mount AUX: and
+     NEWCON:, Failat 100, Echo INJECT-READY; ends at interactive 1>).
+   - TCP key injection VERIFIED end-to-end on it: injected `Dir\n`
+     produced a directory listing at `1>` (user-confirmed live).
+   - Benign red herring documented: `Illegal instruction: 4e7b at
+     00FC0564` = KS 1.3's own 68010-detection MOVEC; WinUAE skips it
+     (it also saturates op_illg's shared `warned` counter to 20).
+
+2. `-conhook` switch added to the patched build (win32.cpp):
+   console_emulation=1 + console_hook_only=1, skips the
+   consolehook_config prefs wipe. Builds and runs; C-side console
+   output path (consolehook_beginio -> console_out_f -> stdout)
+   compiles and the console thread starts on hook install.
+
+3. WHY the stock hook never fires on KS 1.3: filesys.asm's
+   afterdos_hack() explicitly skips exec < 37 ("KS 1.x does not
+   support RTF_AFTERDOS"), and filesys.cpp only emits the
+   RTF_AFTERDOS resident for kickstart_version >= 39. So neither
+   installer path exists on KS 1.3.
+
+4. FIRST PATCH ATTEMPT (patch_ks1conhook.py, blob level): patch
+   afterdos_hack in the assembled blob (filesys_bootrom.cpp) so
+   exec < 37 calls consolehook directly (consolehook only needs
+   exec: Forbid/FindName('console.device')/Permit + trap $FF38/17).
+   Blob bytes verified correct (bsr.w consolehook at 0xb4 -> 0x1f2a,
+   bra.s .rsh, nop). RESULT: no effect — no `[conhook] trap17` log
+   ever, while the machine boots fine.
+
+5. DIAGNOSTIC THAT CRACKED IT: added a temporary log of EVERY
+   $FF38 trap mode at the top of mousehack_done() (filesys.cpp).
+   Result on KS 1.3: modes 18, 4, 5 arrive (once each, ~0.65 s,
+   right after diagentry) but NEVER mode 17. Mode 18 = heartbeatvblank,
+   mode 4/5 = setup_exter's direct calls — so setup_exter RUNS, traps
+   work at diag time, and consolehook is simply never called.
+
+6. ROOT CAUSE: **the blob and src/filesys.asm have DIVERGED.** The
+   .asm says setup_exter starts with `bsr.w afterdos_hack`, but the
+   generated blob's setup_exter does NOT contain that call — a
+   scan of the whole blob found ZERO callers of afterdos_hack
+   (0x9e). The v1 patch sits in dead code. filesys.asm is
+   documentation only; filesys_bootrom.cpp is the ground truth
+   (nasm in build.bat is only for CPU-helper .asm objects, the blob
+   is NOT regenerated at build time; it is also gitignored, so keep
+   the patch scripts idempotent and re-runnable).
+
+7. SECOND PATCH ATTEMPT (patch_ks1vbl.py) — redirect the exter
+   vblank path into a trampoline that polls consolehook:
+   - v2a (bra.w at 0x8ce over what looked like heartbeatvblank's
+     movem prologue): machine reset-looped ~8 s per cycle, grey
+     screen. Log: `B-Trap F7CC at 00F008D4` — the bra's displacement
+     word was EXECUTED as an opcode.
+   - Blob layout truth discovered by disassembly + bsr-target scan:
+     setup_exter's `bsr.w heartbeatvblank` (at 0xa10, disp $FEBC)
+     targets **0x8d0**, which in the original blob is the movem's
+     MASK WORD $F0F8 — an F-line opcode! So the stock flow is:
+     enter at 0x8d0 -> line-F exception -> KS 1.3's line-F vector
+     (0x2C -> 00FC082A) handler RTEs back to 0x8d2 -> routine body
+     runs (move.l d0,d2 / move.l d1,d3 / trap 18 ...). The movem at
+     0x8ce NEVER executes (dead except as the exception trigger);
+     d0-d3/a0-a4 are in fact not saved by this routine. The B-Trap
+     log for the stock $F0F8 is silenced because op_illg's shared
+     `warned` counter is already >= 20 from the 4e7b illegals.
+   - v2b (current state): bra.w at 0x8d2 (replacing move.l d0,d2 /
+     move.l d1,d3) -> trampoline at 0x9e (in the dead afterdos_hack
+     zone): save d0-d2/a0-a1/a6, bsr.w consolehook (0x1f2a),
+     restore, re-execute move.l d0,d2 / move.l d1,d3, bra.w back to
+     0x8d6. All three branch targets machine-verified. Built but
+     NOT yet successfully run-verified (last launch attempts were
+     interrupted; screen stayed grey — unverified whether that was
+     a stale window from v2a).
+
+8. Host-side changes made this session (all built OK):
+   - consolehook.cpp: consolehook_ret() made idempotent (guard
+     `if (beginio) return;`) — required for any polling design,
+     otherwise each poll re-stores chook as the "original" BeginIO
+     and the next CMD_WRITE recurses into itself.
+   - filesys.cpp: temporary diagnostics — every-$FF38-mode log
+     (capped at 40 lines) + trap17-poll log (capped at 3). REMOVE
+     before final commit.
+   - patch scripts: patch_ks1conhook.py (v1, dead code — superseded),
+     patch_ks1vbl.py (v2, idempotent, currently installed in the
+     blob). Both keep filesys.asm untouched going forward (drift).
+
+9. NEXT STEPS (design settled, not implemented):
+   - heartbeatvblank runs only ONCE (from setup_exter); the real
+     per-vblank entry is **kaint** (the INTB_VERTB int server
+     heartbeatvblank installs). For a persistent poll, redirect
+     kaint's entry the same way: kaint starts right after
+     heartbeatvblank's `movem.l (sp)+,d0-d3/a0-a4 / rts`
+     (restore mask 4cdf 0f1f + 4e75); its first instructions are
+     move.l (a1),a0 / addq.l #1,(a0). Trampoline: save
+     d0-d2/a0-a1/a6 (consolehook clobbers exactly those; exec int
+     servers require d2-d7/a2-a6 preserved), bsr.w consolehook,
+     restore, re-execute the replaced instructions, bra.w back.
+     consolehook FindName()s console.device every frame until the
+     CLI opens CON:, then patches BeginIO once (host side now
+     idempotent). Per-frame cost is one trap + one FindName — fine.
+   - Verify v2b first (one-shot consolehook at setup_exter time,
+     before console.device exists — expect one trap17 log, no
+     functional hook, but proves the trampoline path end to end).
+   - Then decide: keep the one-shot as a smoke test and add the
+     kaint poller, or go straight to the kaint poller.
+   - Config note: run with ABSOLUTE config paths — a relative
+     `-f scratch/x.uae` makes WinUAE look in its Configurations
+     dir, fail, and open the GUI instead of booting (cost us one
+     run: conout7).
+   - After hook works: remove the temporary FF38/trap17 diagnostics,
+     re-run boot_test.py regression, then commit (winuae-inject is
+     gitignored; the patch scripts + docs/winuae-inject.md carry
+     the repro).
+
 ## 7. Disassembly pass (IN PROGRESS)
 
 Tooling: Capstone m68k via tools/disasm_ed.py (chosen over Ghidra/IRA for
