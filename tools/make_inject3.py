@@ -468,6 +468,19 @@ def build(variant, keys, settle_outer):
         a.label("odn_loop")
         a.raw("33fc0ff000dff180")
         a.pcrel_b("60", "odn_loop")
+    elif variant == "oddisable":
+        # probe: call Disable via the runtime trampoline (jsr -120(a6))
+        # from our context. Clean = trampolines work for us; crash =
+        # every SysBase-vector call is poison in this context.
+        a.install_traphandler()
+        a.raw("2c780004")                 # a6 = SysBase
+        a.holdbeacon(0x0f00, 3)           # RED 3s: entry
+        a.raw("4eaefe88")                 # jsr -120(a6) Disable
+        a.holdbeacon(0x00f0, 3)           # GREEN 3s: Disable returned!
+        a.raw("4eaefe82")                 # jsr -126(a6) Permit
+        a.label("odd2_loop")
+        a.raw("33fc0ff000dff180")         # hold YELLOW = done
+        a.pcrel_b("60", "odd2_loop")
     elif variant == "vtest":
         # full odotrace preamble, then red tight-loop
         a.marker("A")
