@@ -378,12 +378,25 @@ scriptable pattern analysis; full listing at emulator/ed.asm, 6417 lines).
       Not needed for the spec or the Rust port (clean-room from spec
       only, LEGAL.md §6); pure disassembly aid.
 
-## 8. Version comparison (TO DO)
+## 8. Version comparison (DONE 2026-10-15)
 
-- [ ] Extract Ed from Workbench 1.2 (amiga-os-120-workbench.adf) and diff
-- [ ] Extract Ed from Workbench 3.1 (user's amiga.adf) and diff the
-      command set against the 1991 manual's list
-- [ ] Write version-history section (1.10 → 1.14 → 2.x → 3.1)
+- [x] Extract Ed from Workbench 1.2 (amiga-os-120-workbench.adf) and diff
+      (2026-10-15): WB 1.2's Ed is BYTE-IDENTICAL to WB 1.3's (both
+      "Ed 1.14", md5 28f5d85c...); WB 1.0/1.1 ship Ed 1.10
+      (byte-identical to each other, md5 78dd2cf0...), which differs
+      from 1.14 only by "Error - Disk Full", "Tabs in file expanded"
+      and seg7 work. WB 1.0/1.1/1.2 also ship c/Edit; WB 1.3 drops it
+- [x] Extract Ed from the 3.1-era install and diff the command set
+      against the 1991 manual's list (2026-10-15): the WB 3.1 floppy
+      has NO Ed binary (only S/Ed-startup); the OS 2.x-3.x Ed is one
+      binary, Ed 2.00 / $VER: ed 37.11 (13.5.91), 25,044 bytes, from
+      Cloanto's install tree (Shared/dir/System/C/Ed) - C-era, single
+      24,948-byte code hunk + 8-byte data hunk + reloc, template
+      FROM/A,SIZE/N,WITH/K,WINDOW/K,TABS/N,WIDTH=COLS/N,HEIGHT=ROWS/N,
+      embedded menu table (adds NW OP RK RE VW RX SF/DF). Full report:
+      docs/ed-versions.md; binaries in materials/ed-versions/
+- [x] Write version-history section (1.10 -> 1.14 -> 2.x -> 3.1)
+      (2026-10-15, docs/ed-versions.md)
 
 ## 9. Clean-room reimplementation in Rust (IN PROGRESS — started
       2026-10-12, after decision that the MVP does not need the parked
@@ -480,8 +493,10 @@ scriptable pattern analysis; full listing at emulator/ed.asm, 6417 lines).
 
 ## 10. Open questions
 
-- [ ] Does Ed 1.14 accept any template arguments beyond FROM and SIZE?
-      (spec §9) — resolve via disassembly or live testing
+- [x] Does Ed 1.14 accept any template arguments beyond FROM and
+      SIZE? RESOLVED (2026-10-15): no - 1.14's template is exactly
+      FROM/A,SIZE [BIN]; Ed 2.00's is
+      FROM/A,SIZE/N,WITH/K,WINDOW/K,TABS/N,WIDTH=COLS/N,HEIGHT=ROWS/N
 - [ ] Meaning of the "12;0;0" string in segment 2 — likely console
       control; confirm during dynamic analysis
 - [ ] Confirm whether any WB 1.3-era Ed revision differences exist vs

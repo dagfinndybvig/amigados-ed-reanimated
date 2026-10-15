@@ -378,8 +378,17 @@ Workbench 1.3 disk in DF0:, Ed 1.14 started from the CLI as
 The AmigaOS 2.0+ ED (documented in the 1991 3rd-edition manual) adds mouse
 selection, `WITH` command files, function-key display (`DF`), menus (`EM`),
 `WIDTH`/`HEIGHT`/`WINDOW`/`TABS` template arguments, and extra commands
-(`DL`, `DW`, `EL`, `EP`, `FC`). None of these apply to Ed 1.14
-**[VERIFY against disassembly]**.
+(`DL`, `DW`, `EL`, `EP`, `FC`). None of these apply to Ed 1.14.
+
+Confirmed by binary comparison (2026-10-15, see `docs/ed-versions.md`)
+**[BIN]**: the 2.x/3.x Ed is a different program (Ed 2.00, V37.11, C-era,
+single code hunk) whose template is
+`FROM/A,SIZE/N,WITH/K,WINDOW/K,TABS/N,WIDTH=COLS/N,HEIGHT=ROWS/N` and
+whose embedded menu table adds `NW`, `OP`, `RK`, `RE`, `VW`, `RX`, `SF`/`DF`
+to the 1.14 command set. Ed 1.14's own template remains `FROM/A,SIZE`
+(§2). WB 1.2 already shipped Ed 1.14 (byte-identical to WB 1.3's); WB
+1.0/1.1 shipped Ed 1.10, which differs from 1.14 only by the disk-full
+error, a second tab-expansion message, and seg7 work.
 
 ## 11. Open items / next steps
 

@@ -40,12 +40,23 @@ def parse_old(data):
     segs, off = [], 20 + 4 * n
     for i in range(n):
         marker, size = be32(data, off), be32(data, off + 4)
-        if marker != 0x3E9 or size != sizes[i]:
+        # 0x3E9 = code hunk, 0x3EA = data hunk (Ed 2.00 has both)
+        if marker not in (0x3E9, 0x3EA) or size != sizes[i]:
             sys.exit("old format: hunk %d marker/size mismatch at 0x%x" % (i, off))
         start = off + 8
         segs.append({"n": i, "start": start, "size": size * 4,
                      "raw": data[start : start + size * 4]})
         off = start + size * 4
+        # optional HUNK_RELOC32 blocks: 0x3EC, then [count, hunk, count
+        # offsets] groups, terminated by a zero count
+        while be32(data, off) == 0x3EC:
+            off += 4
+            while True:
+                cnt = be32(data, off)
+                off += 4
+                if cnt == 0:
+                    break
+                off += 4 + 4 * cnt
         if be32(data, off) == 0x3F2:  # segment delimiter
             off += 4
     return segs, data, "old TRIPOS"
