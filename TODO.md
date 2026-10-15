@@ -495,6 +495,83 @@ KS 1.3 needs a custom entry path.
      gitignored; the patch scripts + docs/winuae-inject.md carry
      the repro).
 
+**UPDATE 2026-10-15 (late): MYSTERY SOLVED — "$F0F8 is eaten by
+  WinUAE's PMMU emulation". Supersedes items 7-9 above.**
+
+  The four boots of the evening are all explained by ONE mechanism,
+  now confirmed at source level (newcpu.cpp / cpuemu_*.cpp /
+  gencpu.cpp): F-line words of the $F0xx family are dispatched to
+  mmu_op30(), which reads the opcode PLUS ONE EXTENSION WORD
+  (4 bytes total) and — with no MMU configured — handles them as
+  a silent no-op (mmu_op30fake_pmove). Other $Fxxx words fall to
+  op_illg -> B-Trap log -> Exception(11) -> crash/reset.
+
+  - The pristine blob really does have setup_exter's
+    `bsr.w heartbeatvblank` (0xa10, disp $FEBC) landing at 0x8d0 —
+    which is the movem's MASK WORD $F0F8. Under WinUAE that word
+    is eaten as a 4-byte PMMU no-op (consuming the next word
+    `24 00` = move.l d0,d2 as its "extension"), so execution
+    resumes at 0x8d4: heartbeatvblank's body runs WITHOUT the movem
+    save and without move.l d0,d2. Buggy-but-working blob (would
+    crash on real hardware); the blob's layout is drifted 2 bytes
+    from src/filesys.asm somewhere before 0x8ce.
+  - Evidence matrix (all four runs consistent):
+    | run | blob 0x8d0.. | outcome |
+    | pristine (conout9/15/17) | $F0F8 + $2400 eaten | boots, mode 18/4/5 fire, NO B-Trap logs even uncapped |
+    | v2a bra at 0x8ce (conout11/13) | $F7CC (bra disp) | op_illg B-Trap F7CC -> Exception 11 -> reset loop |
+    | v2b bra at 0x8d2 (conout14) | $F0F8 + $6000 (bra opcode) eaten; resume 0x8d4 = $F7C8 (bra disp) | B-Trap F7C8 -> reset loop |
+  - Instrumentation used (still in the working tree, exe built
+    from it): uncapped B-Trap log (own counter, 200), every-$FF38
+    trap log with RETURN ADDRESS (40), trap17 poll log (3).
+    Return addresses measured on a pristine boot: mode 18 ->
+    00F008EA (blob 0x8e6, jsr inside heartbeatvblank), mode 4 ->
+    00F00A24 (0xa20), mode 5 -> 00F017D0 (0x17cc). Blob base =
+    00F00004 confirmed twice.
+  - Build-order lesson (cost us a full test cycle): the "v2b
+    build" at 18:01 had actually compiled v2a bytes — the v2b
+    patch wrote the blob at 18:04, AFTER the build. ALWAYS check
+    blob mtime < exe mtime after patch_ks1vbl.py && build.bat.
+
+  CORRECT PATCH DESIGN (not yet applied — next session):
+  1. Leave 0x8d0-0x8d3 ($F0F8 + its eaten extension) untouched.
+  2. Redirect at 0x8d4 (the true first-executed instruction):
+     replace `26 01 30 3c` with bra.w -> trampoline
+     (disp = 0x9e - (0x8d4+4) = $F7C6). NOT bsr.w — a bsr from
+     0x8d4 would return into the middle of `30 3c ff 38`.
+  3. Trampoline at 0x9e (dead afterdos_hack zone, verified no
+     callers): movem.l d0-d2/a0-a1/a6,-(sp) [48 e7 e0 c2];
+     bsr.w consolehook (0x1f2a); movem restore [4c df 43 07];
+     re-execute move.l d1,d3 [26 01]; bra.w 0x8d6 (resume at the
+     complete `30 3c ff 38`). Trampoline is 4+4+4+2+4 = 18 bytes.
+  4. This fires ONCE, at setup_exter (diag time) — console.device
+     does not exist yet, FindName fails, harmless. The FUNCTIONAL
+     hook still needs the per-vblank poller: kaint (the INTB_VERTB
+     server heartbeatvblank installs). kaint's RUNTIME location
+     must be found from the runtime ROM, not the drifted asm
+     (asm says: right after heartbeatvblank's
+     `movem.l (sp)+,d0-d3/a0-a4` [4c df 0f 1f] + rts; body
+     starts move.l (a1),a0 / addq.l #1,(a0)). Patch kaint's first
+     4 bytes the same way (save/restore d0-d2/a0-a1/a6 around
+     consolehook — exec int servers require d2-d7/a2-a6
+     preserved; consolehook clobbers exactly d0-d2/a0-a1/a6).
+  5. To find kaint reliably: fix the runtime rtarea dump (the
+     rtdump.bin instrumentation in filesys_install_code failed to
+     produce a file this session — fopen path had MSVC C4129
+     escape warnings; rewrite with forward slashes:
+     "C:/Users/.../scratch/rtdump.bin") and disassemble the dump.
+  6. Host side already done and idempotent: consolehook_ret()
+     guard (beginio), so repeated polls are safe.
+  7. Working-tree state at shutdown: PRISTINE blob (v2b/v1
+     reverted, byte-verified), diagnostics in filesys.cpp /
+     newcpu.cpp (capped logs — remove before final commit of the
+     sub-project), exe (18:23) built from pristine blob +
+     diagnostics. patch_ks1conhook.py = v1 (dead code, superseded,
+     keep as history), patch_ks1vbl.py = v2 script (WRONG anchor
+     0x8d2 per the model above — next session: change anchor to
+     `26 01 30 3c` at 0x8d4 and trampoline per design step 2-3).
+  8. Config reminders: ABSOLUTE .uae path (relative opens the GUI);
+     kill stray winuae64.exe before relinking (LNK1104).
+
 ## 7. Disassembly pass (IN PROGRESS)
 
 Tooling: Capstone m68k via tools/disasm_ed.py (chosen over Ghidra/IRA for
