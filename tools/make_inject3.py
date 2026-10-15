@@ -481,6 +481,72 @@ def build(variant, keys, settle_outer):
         a.label("odd2_loop")
         a.raw("33fc0ff000dff180")         # hold YELLOW = done
         a.pcrel_b("60", "odd2_loop")
+    elif variant == "lvoprobe":
+        # 2026-10-15: the 'poisoned trampoline' results were encoding
+        # typos - 4eaefe88 is jsr -376(a6) (mid-table garbage), NOT
+        # jsr -120(a6). V34 truth: Enable=-120, Disable=-126,
+        # Forbid=-132, Permit=-138; CloseDevice=-450 (-504 is an
+        # unrelated stub). This probe calls each with CORRECT
+        # encodings, one beacon per step, then opens timer.device and
+        # input.device via LVO -444 (io_Error shown as 0x1XX phases).
+        a.install_traphandler()
+        a.raw("2c780004")                 # a6 = SysBase
+        a.holdbeacon(0x0f00, 4)           # RED: entry
+        a.raw("4eaeff88")                 # jsr -120(a6) Enable
+        a.holdbeacon(0x00f0, 4)           # GREEN: Enable returned
+        a.raw("4eaeff82")                 # jsr -126(a6) Disable
+        a.holdbeacon(0x0ff0, 4)           # YELLOW: Disable returned
+        a.raw("4eaeff7c")                 # jsr -132(a6) Forbid
+        a.raw("4eaeff76")                 # jsr -138(a6) Permit
+        a.holdbeacon(0x00ff, 4)           # CYAN: Forbid/Permit returned
+        # OpenDevice("timer.device") via LVO -444
+        a.pcrel_w("41fa", "ioreq")
+        for off in (0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44):
+            a.raw("42a8%04x" % off)
+        a.raw("317c00300012")             # mn_Length = 48
+        a.pcrel_w("41fa", "dev")          # a0 = timer.device
+        a.raw("7000")                     # d0 = unit 0
+        a.pcrel_w("41fb", "ioreq")        # a1 = ioreq
+        a.raw("7200")                     # d1 = flags 0
+        a.raw("4eaefe44")                 # jsr OpenDevice(-444)
+        a.pcrel_w("41fa", "ioreq")
+        a.raw("4280")                     # clr.l d0
+        a.raw("1028001f")                 # d0.b = io_Error
+        a.raw("00400100")                 # ori.w #$100,d0 (marker)
+        a.showphases()                    # io_Error as 0x1XX phases
+        a.raw("4a00")                     # tst.b d0
+        a.pcrel_w("6600", "lvp_fail1")
+        a.holdbeacon(0x0fff, 4)           # WHITE: timer.device open
+        a.pcrel_w("41fa", "ioreq")
+        a.raw("4eaefe3e")                 # jsr CloseDevice(-450)
+        a.holdbeacon(0x000f, 4)           # BLUE: closed
+        a.label("lvp_fail1")
+        # OpenDevice("input.device") via LVO -444 (expect graceful
+        # failure under the lean startup: io_Error phases, no hang)
+        a.pcrel_w("41fa", "ioreq")
+        for off in (0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44):
+            a.raw("42a8%04x" % off)
+        a.raw("317c00300012")
+        a.pcrel_w("41fa", "dev2")         # a0 = input.device
+        a.raw("7000")
+        a.pcrel_w("41fb", "ioreq")
+        a.raw("7200")
+        a.raw("4eaefe44")
+        a.pcrel_w("41fa", "ioreq")
+        a.raw("4280")
+        a.raw("1028001f")
+        a.raw("00400100")
+        a.showphases()
+        a.raw("4a00")
+        a.pcrel_w("6600", "lvp_fail2")
+        a.holdbeacon(0x0fff, 4)           # WHITE: input.device open!
+        a.pcrel_w("41fa", "ioreq")
+        a.raw("4eaefe3e")                 # jsr CloseDevice(-450)
+        a.label("lvp_fail2")
+        a.holdbeacon(0x0f0f, 4)           # MAGENTA: all steps done
+        a.label("lvp_loop")
+        a.raw("33fc0f0f00dff180")
+        a.pcrel_b("60", "lvp_loop")
     elif variant == "vtest":
         # full odotrace preamble, then red tight-loop
         a.marker("A")
@@ -581,7 +647,7 @@ def build(variant, keys, settle_outer):
         a.pcrel_b("61", "keydelay")   # bsr keydelay
         a.pcrel_b("60", "loop")       # bra loop
 
-    if variant != "stack":
+    if variant not in ("stack", "lvoprobe"):
         a.label("done")
         a.pcrel_w("41fa", "ioreq")    # a0 = ioreq (41fb is a1!)
         a.raw("4eaefe08")             # jsr CloseDevice(-504,a6)
@@ -626,7 +692,7 @@ def build(variant, keys, settle_outer):
             a.label("sergap")
             a.raw("51c9fffe")              # dbra d1,sergap
             a.raw("4e75")
-        if variant in ("peekvec", "odbase", "odname", "oddump"):
+        if variant in ("peekvec", "odbase", "odname", "oddump", "lvoprobe"):
             a.emit_showphases()
         if variant in ("dump444", "dumpod", "oddirect", "odsetup", "odclr", "odlea", "odbase", "fulldirect"):
             # dhold: hold color = d0.w for ~10s
@@ -646,6 +712,9 @@ def build(variant, keys, settle_outer):
         a.raw("7000")
         a.raw("4e75")
 
+    if variant == "lvoprobe":
+        a.emit_showphases()
+
     while a.here() % 4:
         a.raw("4e71")           # nop: code region must be longword-aligned
     body_len = a.here()      # measure before data labels are bound
@@ -659,6 +728,7 @@ def build(variant, keys, settle_outer):
     keys_blob = bytes(keys) + b"\xff"
     data += keys_blob                                    # keys
     data += DEVNAME                                      # dev
+    data += b"input.device\x00"                          # dev2
     data += b"\x00" * 36                                # replyport
     data += b"\x00" * STACK_BYTES                       # stack buffer
     while len(data) % 4:
@@ -669,10 +739,11 @@ def build(variant, keys, settle_outer):
     events = ioreq + 48
     keys = events + 32
     dev = keys + len(keys_blob)
-    replyport = dev + len(DEVNAME)
+    dev2 = dev + len(DEVNAME)
+    replyport = dev2 + 13
     stacktop = replyport + 36 + STACK_BYTES
     for name, val in (("ioreq", ioreq), ("events", events),
-                      ("keys", keys), ("dev", dev),
+                      ("keys", keys), ("dev", dev), ("dev2", dev2),
                       ("replyport", replyport), ("stacktop", stacktop)):
         a.labels[name] = val
     body = a.assemble()          # now with data labels bound

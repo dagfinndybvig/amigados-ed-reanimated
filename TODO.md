@@ -174,7 +174,7 @@ autonomous, input-free pipeline is the way forward:
       (2.0+ feature) â€” `C:ED RAM:a <s/CLI-Startup` never opened Ed
       (ReadArgs "Bad arguments", swallowed by Failat 100). Test disk
       edboot-atest.adf kept for reference
-3. [~] InputEvent injector (make_inject2.py) — EXTENSIVE PROGRESS
+3. [~] InputEvent injector (make_inject2.py) ï¿½ EXTENSIVE PROGRESS
       2026-10-12/13, one bug from working. State:
 
       PROVEN LIVE on KS 1.3 (each by boot experiment):
@@ -319,6 +319,38 @@ autonomous, input-free pipeline is the way forward:
    order of "one"/"two" in the buffer answers the A-cursor question.
 2. The pending live items (A-command cursor, M n, groups/RP, U undo
    live check, IF/WB, differential testing) all depend on this.
+
+
+**UPDATE 2026-10-15: ROOT CAUSE FOUND - the "poisoned trampolines" were an encoding typo.**
+
+  - 4eaefe88 = jsr -376(a6), NOT jsr -120(a6) (FE88 vs FF88 typo).
+    LVO -376 is mid-jump-table -> executes garbage -> crash. Same for
+    4eaefe82 = -382 (intended -126). All injector crashes explained.
+  - V34 exec LVO truth (verified statically from kick13.rom vector
+    table at ROM offset 0x1a7c; entries are signed word offsets,
+    entry 0 = LVO -6): Enable=-120, Disable=-126, Forbid=-132,
+    Permit=-138, OpenDevice=-444 (ROM 0x6a2), CloseDevice=-450
+    (0x6f0), DoIO=-456 (0x718), OpenLibrary=-552 (0x1474).
+  - LVO -504 is NOT CloseDevice (it is a move.w #$174,$dff032.l;
+    rts stub) - explains the old odo4 "CloseDevice(-504)" hang.
+  - SysBase+0x15e = DeviceList, SysBase+0x17a = LibList.
+
+**PIVOT: patched WinUAE sub-project (this machine only).**
+
+  - emulator/winuae-inject/ (gitignored, GPL): WinUAE OSS source
+    (github tonioni/WinUAE master) built with VS 2019 BuildTools.
+    Third-party deps not in the git tree -> features off in
+    sysconfig.h, zlib+libpng vendored /MT, d3dx9 via nuget,
+    generated src/stubs.cpp for removed TUs. Full rebuild recipe:
+    docs/winuae-inject.md. Binary: bin/winuae64.exe.
+  - VERIFIED: boots KS1.3 identically to the stock OSS binary
+    (boot_test.py --exe, same color timeline + OCR, 50 FPS).
+  - NEXT: hook the host-keyboard -> Amiga keycode path (cia.c/
+    keybuf.c) + tiny TCP/drop-file listener (~100-300 lines C);
+    then boot_test.py gains an inject step and the [VERIFY] items
+    in docs/ed-spec.md become mechanically testable. The in-emulator
+    injector (make_inject3.py lvoprobe) is shelved - keep the LVO
+    findings above, they stand on their own.
 
 ## 7. Disassembly pass (IN PROGRESS)
 

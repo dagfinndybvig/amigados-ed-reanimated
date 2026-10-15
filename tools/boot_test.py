@@ -123,6 +123,9 @@ def main():
     ap.add_argument("--serial-port", type=int, default=None,
                     help="read WinUAE's serial TCP bridge on this port")
     ap.add_argument("--ocr-every", type=int, default=2, help="OCR every Nth poll")
+    ap.add_argument("--exe", default=None,
+                    help="WinUAE binary to launch (default: emulator/winuae-oss/winuae64.exe; "
+                         "use emulator/winuae-inject/bin/winuae64.exe for the injection build)")
     args = ap.parse_args()
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
@@ -132,7 +135,7 @@ def main():
     shots = os.path.join(SCRATCH, "shots")
     os.makedirs(shots, exist_ok=True)
 
-    proc = subprocess.Popen([WINUAE, "-f", cfg])
+    proc = subprocess.Popen([args.exe or WINUAE, "-f", cfg])
     print("launched pid=%d cfg=%s" % (proc.pid, cfg))
 
     ser_buf = bytearray()
